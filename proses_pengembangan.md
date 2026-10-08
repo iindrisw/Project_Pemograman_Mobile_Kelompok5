@@ -20,3 +20,7 @@ KELOMPOK 5
    Sabbicarel Edward Piris_2488010014 : <img width="1365" height="725" alt="image" src="https://github.com/user-attachments/assets/c2a50487-3e9e-4740-99bd-2ac5dabed503" />
    Ahmad Miftah Hadi Pramana Arsjad_2488010057 :
    ![alt text](Imig.png)
+
+Farhan Muhammad Yousef
+<img width="1918" height="1031" alt="image" src="https://github.com/user-attachments/assets/b50250de-cc74-45e3-b3e2-f65ef1291342" />
+
