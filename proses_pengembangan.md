@@ -18,3 +18,5 @@ KELOMPOK 5
 2) Tugas Anggota
 1. accept member
    Sabbicarel Edward Piris_2488010014 : <img width="1365" height="725" alt="image" src="https://github.com/user-attachments/assets/c2a50487-3e9e-4740-99bd-2ac5dabed503" />
+   Ahmad Miftah Hadi Pramana Arsjad_2488010057 :
+   ![alt text](Imig.png)
