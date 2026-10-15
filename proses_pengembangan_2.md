@@ -31,5 +31,6 @@ Pembagian Jobdesk:
    Mengelola pemrosesan pesanan masuk dan mengubah status pesanan (disiapkan, dikirim, selesai) agar terhubung dengan halaman My Orders pelanggan.
 
    hifi
-   <img width="571" height="343" alt="image" src="https://github.com/user-attachments/assets/858374ee-f055-48dd-a148-b66d3d5363fc" />
+
+   https://www.figma.com/design/AoErf7GiOV735YZtxNmD69/Replicating-a-bakery-shop-website--Community-?node-id=0-1&t=YsDarpKDF0rkw9GU-1
 
