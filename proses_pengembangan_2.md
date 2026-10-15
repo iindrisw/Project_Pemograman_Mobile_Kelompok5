@@ -33,4 +33,5 @@ Pembagian Jobdesk:
    hifi
 
    https://www.figma.com/design/AoErf7GiOV735YZtxNmD69/Replicating-a-bakery-shop-website--Community-?node-id=0-1&t=YsDarpKDF0rkw9GU-1
+<img width="773" height="477" alt="image" src="https://github.com/user-attachments/assets/068f5aa8-4a9a-4287-8214-d9a4653be84c" />
 
