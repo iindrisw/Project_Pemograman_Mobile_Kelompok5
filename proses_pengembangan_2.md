@@ -5,24 +5,29 @@ KELOMPOK 5
 3. AHMAD MIFTAH HADI PRAMANA ARSJAD 2488010057
 4. FARHAN MUHAMMAD YOUSEF 2488010073
 
-Tema Proyek: E-Commerce / Marketplace UMKM Lokal 
-
-Judul: LokalMart Kelas: Aplikasi Marketplace Sederhana untuk Produk dan Kuliner UMKM 
-
+Tema Proyek: E-Commerce Toko Roti
+Judul Aplikasi: MyBakery App
 Pembagian Jobdesk:
-
-Infrastruktur Database & Otentikasi Pengguna (FARHAN MUHAMMAD YOUSEF 2488010073)
-
-Bertanggung jawab dalam perancangan struktur basis data utama sistem serta pengembangan seluruh modul Otentikasi Pengguna. Tugas mencakup pembuatan fitur Registrasi & Login (dengan sistem keamanan enkripsi password), pengaturan hak akses (role untuk pembeli, penjual, dan admin), pembuatan token sesi akses, serta pengembangan halaman Login, Register, dan Profil Pengguna (edit data diri).
-
-Katalog Produk & Sisi Pencarian Pembeli (AHMAD MIFTAH HADI PRAMANA ARSJAD 2488010057)
-
-Bertanggung jawab dalam pengembangan antarmuka utama dan sistem pencarian produk. Tugas mencakup pembuatan basis data produk dan kategori, pengembangan jalur data (API) untuk menampilkan produk, fitur filter kategori dan pencarian barang, serta pembangunan halaman Beranda (Home) dan Detail Produk yang interaktif bagi pembeli.
-
-Pemesanan, Keranjang & Transaksi Pelanggan (INDRI SETIAWATI 2488010077)
-
-Bertanggung jawab atas seluruh alur belanja dari keranjang hingga proses checkout. Tugas mencakup perancangan struktur data keranjang dan riwayat pesanan, pembuatan logika otomatis untuk mengurangi stok barang saat transaksi berhasil, serta pembangunan halaman Keranjang Belanja, halaman Checkout (pilih alamat dan pembayaran), dan halaman Riwayat Status Pesanan.
-
-Dashboard Penjual & Manajemen Toko (SABBICAREL EDWARD PIRIS 2488010014)
-
-Bertanggung jawab atas pengelolaan sistem dari sisi penjual atau pemilik UMKM kelas. Tugas mencakup penghubungan relasi produk ke toko masing-masing, pengembangan fitur CRUD produk khusus seller (tambah, edit, hapus barang), pengelolaan status pesanan masuk (dari proses pengemasan hingga pengiriman), serta pembangunan antarmuka Dashboard Seller.
+1. Infrastruktur Database & Otentikasi Pengguna (Farhan Muhammad Yousef - 2488010073)
+   Fokus di keamanan dan manajemen akun
+   Merancang struktur database utama
+   Membangun alur Login dan Register
+   Mengembangkan halaman Profile dan Settings untuk manajemen data pengguna
+   Mengurus token sesi dan keamanan enkripsi password.
+2. Katalog Produk & Tampilan Utama (Ahmad Miftah Hadi Pramana Arsjad - 2488010057)
+   Fokus di penyajian katalog roti
+   Membangun antarmuka Home untuk menampilkan best sellers dan roti segar
+   Mengembangkan halaman Products atau Menu lengkap dengan sistem kategorinya
+   Mengerjakan antarmuka halaman Support
+   Menyiapkan jalur data (API) untuk menampilkan detail produk ke aplikasi.
+3. Keranjang, Checkout & Transaksi (Indri Setiawati - 2488010077)
+   Fokus di alur belanja sampai pembayaran
+   Mengelola logika dan halaman Shopping Cart (Keranjang Belanja) beserta ringkasan harga
+   Membangun halaman Addresses (alamat pengiriman) dan Payments (metode pembayaran)
+   Mengembangkan halaman My Orders agar pembeli bisa melacak status pesanannya
+   Membuat logika sinkronisasi untuk mengurangi stok roti saat pembayaran berhasil.
+4. Dashboard Admin & Manajemen Pesanan (Sabbicarel Edward Piris - 2488010014)
+   Sistem Admin MyBakery
+   Membangun Dashboard Admin khusus pengelola toko
+   Membuat fitur CRUD (tambah, edit, hapus) menu roti, gambar, dan harga
+   Mengelola pemrosesan pesanan masuk dan mengubah status pesanan (disiapkan, dikirim, selesai) agar terhubung dengan halaman My Orders pelanggan.
