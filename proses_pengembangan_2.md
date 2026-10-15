@@ -24,7 +24,7 @@ Pembagian Jobdesk:
    Membangun halaman Addresses (alamat pengiriman) dan Payments (metode pembayaran)
    Mengembangkan halaman My Orders agar pembeli bisa melacak status pesanannya
    Membuat logika sinkronisasi untuk mengurangi stok roti saat pembayaran berhasil.
-4. Flash page, Dashboard Home, Payment, Setting dan support (Sabbicarel Edward Piris - 2488010014)
+4. Splash page, Dashboard Home, Payment, Setting dan support (Sabbicarel Edward Piris - 2488010014)
    Sistem Home MyBakery
    Membangun Dashboard interaktif
    Membuat fitur CRUD (tambah, edit, hapus) menu roti, gambar, dan harga
