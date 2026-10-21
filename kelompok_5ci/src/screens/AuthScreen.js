@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   Image,
   KeyboardAvoidingView,
@@ -12,10 +12,14 @@ import {
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useTheme } from '../theme/ThemeContext';
 
 const breadImage = require('../../assets/splash_screen/logo_spl_s.png');
 
 export default function AuthScreen({ navigation, mode }) {
+  const { theme } = useTheme();
+  const colors = useMemo(() => makeColors(theme), [theme]);
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const isLogin = mode === 'login';
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -155,18 +159,20 @@ export default function AuthScreen({ navigation, mode }) {
   );
 }
 
-const colors = {
-  background: '#faf8f6',
-  ink: '#302823',
-  muted: '#95877e',
-  orange: '#e66b20',
-  paleOrange: '#f3e9df',
-  border: '#eee7e1',
-  placeholder: '#a89b92',
-  white: '#ffffff',
-};
+// Pemetaan nama warna lokal screen ini ke token theme global
+const makeColors = (t) => ({
+  background: t.background,
+  ink: t.text,
+  muted: t.textMuted,
+  orange: t.primary,
+  paleOrange: t.card,
+  border: t.border,
+  placeholder: t.placeholder,
+  white: t.surface,
+  onPrimary: t.onPrimary,
+});
 
-const styles = StyleSheet.create({
+const createStyles = (colors) => StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: colors.background,
@@ -321,7 +327,7 @@ const styles = StyleSheet.create({
     marginTop: 29,
   },
   submitButtonText: {
-    color: colors.white,
+    color: colors.onPrimary,
     fontSize: 13,
     fontWeight: '700',
   },

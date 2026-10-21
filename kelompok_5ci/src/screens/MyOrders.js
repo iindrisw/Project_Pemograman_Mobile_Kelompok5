@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   Image,
   ScrollView,
@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useTheme } from '../theme/ThemeContext';
 
 const ongoingOrders = [
   {
@@ -62,6 +63,8 @@ const previousOrders = [
 ];
 
 export default function MyOrders({ navigation }) {
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const [activeTab, setActiveTab] = useState('Ongoing');
   const orders = activeTab === 'Ongoing' ? ongoingOrders : previousOrders;
 
@@ -83,7 +86,7 @@ export default function MyOrders({ navigation }) {
           accessibilityRole="button"
           accessibilityLabel="Back to Profile"
         >
-          <Ionicons name="arrow-back" size={18} color="#493a31" />
+          <Ionicons name="arrow-back" size={18} color={theme.text} />
         </TouchableOpacity>
         <Text style={styles.title}>My Orders</Text>
       </View>
@@ -154,7 +157,7 @@ export default function MyOrders({ navigation }) {
               <Text style={styles.price}>{order.price}</Text>
               {order.status !== 'Delivered' && (
                 <View style={styles.progressLabel}>
-                  <Ionicons name="time-outline" size={14} color="#c96a27" />
+                  <Ionicons name="time-outline" size={14} color={theme.primary} />
                   <Text style={styles.progressText}>Order in progress</Text>
                 </View>
               )}
@@ -166,10 +169,10 @@ export default function MyOrders({ navigation }) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (t) => StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#faf7f2',
+    backgroundColor: t.background,
   },
   header: {
     flexDirection: 'row',
@@ -185,12 +188,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: '#eee4da',
+    borderColor: t.border,
     borderRadius: 12,
-    backgroundColor: '#fffdfa',
+    backgroundColor: t.surface,
   },
   title: {
-    color: '#382c25',
+    color: t.text,
     fontSize: 21,
     fontWeight: '700',
   },
@@ -200,7 +203,7 @@ const styles = StyleSheet.create({
     marginBottom: 18,
     padding: 4,
     borderRadius: 11,
-    backgroundColor: '#f2e9df',
+    backgroundColor: t.card,
   },
   tab: {
     flex: 1,
@@ -210,15 +213,15 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   activeTab: {
-    backgroundColor: '#ce6b21',
+    backgroundColor: t.primary,
   },
   tabText: {
-    color: '#8b786a',
+    color: t.textMuted,
     fontSize: 12,
     fontWeight: '600',
   },
   activeTabText: {
-    color: '#ffffff',
+    color: t.onPrimary,
   },
   orderList: {
     paddingHorizontal: 20,
@@ -231,23 +234,23 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   sectionTitle: {
-    color: '#8b786a',
+    color: t.textMuted,
     fontSize: 9,
     fontWeight: '700',
     letterSpacing: 1.1,
   },
   orderCount: {
-    color: '#8b786a',
+    color: t.textMuted,
     fontSize: 10,
   },
   orderCard: {
     marginBottom: 10,
     padding: 10,
     borderWidth: 1,
-    borderColor: '#eee5dc',
+    borderColor: t.border,
     borderRadius: 14,
-    backgroundColor: '#fffdfa',
-    shadowColor: '#382c25',
+    backgroundColor: t.surface,
+    shadowColor: t.shadow,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.04,
     shadowRadius: 5,
@@ -260,25 +263,25 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   orderDate: {
-    color: '#927f72',
+    color: t.textMuted,
     fontSize: 9,
   },
   statusBadge: {
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 10,
-    backgroundColor: '#eaf0e5',
+    backgroundColor: t.successBg,
   },
   statusText: {
-    color: '#55704b',
+    color: t.success,
     fontSize: 8,
     fontWeight: '600',
   },
   activeStatusBadge: {
-    backgroundColor: '#f9eadc',
+    backgroundColor: t.badgeBg,
   },
   activeStatusText: {
-    color: '#bf641f',
+    color: t.primary,
   },
   productRow: {
     flexDirection: 'row',
@@ -289,20 +292,20 @@ const styles = StyleSheet.create({
     width: 54,
     height: 54,
     borderRadius: 10,
-    backgroundColor: '#eee5dc',
+    backgroundColor: t.border,
   },
   productInfo: {
     flex: 1,
     marginLeft: 10,
   },
   productName: {
-    color: '#382c25',
+    color: t.text,
     fontSize: 12,
     fontWeight: '700',
   },
   productDetails: {
     marginTop: 3,
-    color: '#927f72',
+    color: t.textMuted,
     fontSize: 9,
   },
   cardFooter: {
@@ -312,7 +315,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   price: {
-    color: '#382c25',
+    color: t.text,
     fontSize: 12,
     fontWeight: '700',
   },
@@ -322,7 +325,7 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   progressText: {
-    color: '#c96a27',
+    color: t.primary,
     fontSize: 9,
     fontWeight: '600',
   },

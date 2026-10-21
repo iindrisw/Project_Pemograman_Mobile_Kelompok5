@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   StyleSheet,
   Text,
@@ -9,6 +9,7 @@ import {
   useWindowDimensions,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTheme } from '../theme/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
 
 /* Dipakai kalau layar ini dibuka tanpa data dari HomeScreen */
@@ -26,6 +27,8 @@ const fallbackItems = [
 
 /* ------------------------------- Kartu produk ------------------------------- */
 function GridCard({ item, width, onAdd }) {
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   return (
     <View style={[styles.card, { width }]}>
       <Image source={{ uri: item.image }} style={styles.cardImage} resizeMode="cover" />
@@ -33,7 +36,7 @@ function GridCard({ item, width, onAdd }) {
       <View style={styles.cardBottom}>
         <Text style={styles.cardPrice}>{item.price}</Text>
         <TouchableOpacity style={styles.addBtn} onPress={() => onAdd(item)} activeOpacity={0.85}>
-          <Ionicons name="add" size={22} color="#ffffff" />
+          <Ionicons name="add" size={22} color={theme.onPrimary} />
         </TouchableOpacity>
       </View>
     </View>
@@ -42,10 +45,12 @@ function GridCard({ item, width, onAdd }) {
 
 /* ------------------------------- Item bottom nav ------------------------------ */
 function NavItem({ icon, label, active, onPress }) {
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   return (
     <TouchableOpacity style={styles.navItem} onPress={onPress} activeOpacity={0.8}>
       <View style={[styles.navIconWrap, active && styles.navIconWrapActive]}>
-        <Ionicons name={icon} size={active ? 22 : 26} color={active ? '#ffffff' : '#7a6a60'} />
+        <Ionicons name={icon} size={active ? 22 : 26} color={active ? theme.onPrimary : theme.navInactive} />
       </View>
       <Text style={styles.navLabel}>{label}</Text>
     </TouchableOpacity>
@@ -54,6 +59,8 @@ function NavItem({ icon, label, active, onPress }) {
 
 /* --------------------------------- Layar ini --------------------------------- */
 export default function NewArrivalsScreen({ navigation, route }) {
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const { width } = useWindowDimensions();
   const insets = useSafeAreaInsets();
 
@@ -75,10 +82,10 @@ export default function NewArrivalsScreen({ navigation, route }) {
         <Text style={styles.title}>New Arrivals</Text>
         <View style={styles.headerActions}>
           <TouchableOpacity style={styles.searchBtn} activeOpacity={0.7}>
-            <Ionicons name="search-outline" size={26} color="#ea580c" />
+            <Ionicons name="search-outline" size={26} color={theme.primary} />
           </TouchableOpacity>
           <TouchableOpacity style={styles.filterBtn} activeOpacity={0.7}>
-            <Ionicons name="options-outline" size={22} color="#ea580c" />
+            <Ionicons name="options-outline" size={22} color={theme.primary} />
           </TouchableOpacity>
         </View>
       </View>
@@ -124,8 +131,8 @@ export default function NewArrivalsScreen({ navigation, route }) {
 }
 
 /* ----------------------------------- Styles ----------------------------------- */
-const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: '#FAF7F2' },
+const createStyles = (t) => StyleSheet.create({
+  safeArea: { flex: 1, backgroundColor: t.background },
 
   header: {
     flexDirection: 'row',
@@ -135,16 +142,16 @@ const styles = StyleSheet.create({
     paddingTop: 16,
     paddingBottom: 8,
   },
-  title: { fontSize: 28, fontWeight: 'bold', color: '#2d1a0e' },
+  title: { fontSize: 28, fontWeight: 'bold', color: t.text },
   headerActions: { flexDirection: 'row', alignItems: 'center', gap: 14 },
   searchBtn: { padding: 4 },
   filterBtn: {
     width: 40,
     height: 40,
     borderRadius: 14,
-    backgroundColor: '#ffffff',
+    backgroundColor: t.surface,
     borderWidth: 1,
-    borderColor: '#ece4d9',
+    borderColor: t.border,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -157,11 +164,11 @@ const styles = StyleSheet.create({
     marginTop: 14,
     marginBottom: 16,
   },
-  subTitle: { fontSize: 19, fontWeight: 'bold', color: '#2d1a0e' },
-  count: { fontSize: 14, color: '#78716c' },
+  subTitle: { fontSize: 19, fontWeight: 'bold', color: t.text },
+  count: { fontSize: 14, color: t.textMuted },
 
   card: {
-    backgroundColor: '#ffffff',
+    backgroundColor: t.surface,
     borderRadius: 22,
     padding: 12,
   },
@@ -174,7 +181,7 @@ const styles = StyleSheet.create({
   cardName: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#2d1a0e',
+    color: t.text,
     lineHeight: 20,
     minHeight: 40, // ruang 2 baris supaya semua kartu sama tinggi
   },
@@ -184,21 +191,21 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginTop: 14,
   },
-  cardPrice: { fontSize: 15, color: '#78716c' },
+  cardPrice: { fontSize: 15, color: t.textMuted },
   addBtn: {
     width: 36,
     height: 36,
     borderRadius: 12,
-    backgroundColor: '#e06a24',
+    backgroundColor: t.primary,
     justifyContent: 'center',
     alignItems: 'center',
   },
 
   bottomNav: {
     flexDirection: 'row',
-    backgroundColor: '#ffffff',
+    backgroundColor: t.surface,
     borderTopWidth: 1,
-    borderTopColor: '#ece8e3',
+    borderTopColor: t.border,
     paddingTop: 10,
   },
   navItem: { flex: 1, alignItems: 'center' },
@@ -209,6 +216,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  navIconWrapActive: { backgroundColor: '#e06a24' },
-  navLabel: { fontSize: 12, color: '#78716c', marginTop: 4 },
+  navIconWrapActive: { backgroundColor: t.primary },
+  navLabel: { fontSize: 12, color: t.textMuted, marginTop: 4 },
 });

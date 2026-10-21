@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   Image,
   ScrollView,
@@ -10,6 +10,7 @@ import {
 import { CommonActions } from '@react-navigation/native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTheme } from '../theme/ThemeContext';
 
 const profileOptions = [
   { label: 'My Orders', icon: 'bag-handle-outline' },
@@ -20,6 +21,8 @@ const profileOptions = [
 ];
 
 export default function ProfileScreen({ navigation }) {
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const insets = useSafeAreaInsets();
 
   const goToHome = () => navigation.navigate('Home');
@@ -60,9 +63,9 @@ export default function ProfileScreen({ navigation }) {
             ];
             const rowContent = (
               <>
-                <Ionicons name={option.icon} size={18} color="#88796f" />
+                <Ionicons name={option.icon} size={18} color={theme.textMuted} />
                 <Text style={styles.optionLabel}>{option.label}</Text>
-                <Ionicons name="chevron-forward" size={16} color="#88796f" />
+                <Ionicons name="chevron-forward" size={16} color={theme.textMuted} />
               </>
             );
 
@@ -99,7 +102,7 @@ export default function ProfileScreen({ navigation }) {
           accessibilityRole="button"
           accessibilityLabel="Log out"
         >
-          <MaterialCommunityIcons name="logout" size={17} color="#e65b16" />
+          <MaterialCommunityIcons name="logout" size={17} color={theme.primary} />
           <Text style={styles.logoutText}>Log Out</Text>
         </TouchableOpacity>
       </ScrollView>
@@ -116,7 +119,7 @@ export default function ProfileScreen({ navigation }) {
           accessibilityRole="button"
           accessibilityLabel="Menu"
         >
-          <Ionicons name="bag-outline" size={24} color="#888" />
+          <Ionicons name="bag-outline" size={24} color={theme.navInactive} />
           <Text style={styles.navLabel}>Menu</Text>
         </TouchableOpacity>
 
@@ -127,13 +130,13 @@ export default function ProfileScreen({ navigation }) {
           accessibilityRole="button"
           accessibilityLabel="Back to Home"
         >
-          <Ionicons name="home-outline" size={24} color="#888" />
+          <Ionicons name="home-outline" size={24} color={theme.navInactive} />
           <Text style={styles.navLabel}>Home</Text>
         </TouchableOpacity>
 
         <View style={styles.navItem}>
           <View style={styles.activeProfileIcon}>
-            <Ionicons name="person-outline" size={19} color="#ffffff" />
+            <Ionicons name="person-outline" size={19} color={theme.onPrimary} />
           </View>
           <Text style={styles.activeNavLabel}>Profile</Text>
         </View>
@@ -142,10 +145,10 @@ export default function ProfileScreen({ navigation }) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (t) => StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#faf8f6',
+    backgroundColor: t.background,
   },
   scrollContent: {
     flexGrow: 1,
@@ -160,16 +163,16 @@ const styles = StyleSheet.create({
     width: 64,
     height: 64,
     borderRadius: 32,
-    backgroundColor: '#e8ded3',
+    backgroundColor: t.border,
   },
   name: {
     marginTop: 8,
-    color: '#332a26',
+    color: t.text,
     fontSize: 17,
     fontWeight: '700',
   },
   optionsCard: {
-    backgroundColor: '#ffffff',
+    backgroundColor: t.surface,
     borderRadius: 14,
     paddingHorizontal: 14,
     paddingVertical: 1,
@@ -179,7 +182,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#e8e1dc',
+    borderBottomColor: t.border,
   },
   lastOptionRow: {
     borderBottomWidth: 0,
@@ -187,21 +190,21 @@ const styles = StyleSheet.create({
   optionLabel: {
     flex: 1,
     marginLeft: 11,
-    color: '#392f2a',
+    color: t.text,
     fontSize: 13,
   },
   logoutButton: {
     minHeight: 38,
     marginTop: 15,
     borderRadius: 9,
-    backgroundColor: '#f7eadd',
+    backgroundColor: t.badgeBg,
     alignItems: 'center',
     justifyContent: 'center',
     flexDirection: 'row',
     gap: 7,
   },
   logoutText: {
-    color: '#e65b16',
+    color: t.primary,
     fontSize: 12,
     fontWeight: '600',
   },
@@ -210,12 +213,12 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: '#ffffff',
+    backgroundColor: t.surface,
     flexDirection: 'row',
     justifyContent: 'space-around',
     alignItems: 'center',
     borderTopWidth: 1,
-    borderTopColor: '#f3f4f6',
+    borderTopColor: t.navBorder,
   },
   navItem: {
     minWidth: 60,
@@ -224,20 +227,20 @@ const styles = StyleSheet.create({
   },
   navLabel: {
     marginTop: 2,
-    color: '#888',
+    color: t.navInactive,
     fontSize: 11,
   },
   activeProfileIcon: {
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: '#e65b16',
+    backgroundColor: t.primary,
     alignItems: 'center',
     justifyContent: 'center',
   },
   activeNavLabel: {
     marginTop: 2,
-    color: '#e65b16',
+    color: t.primary,
     fontSize: 9,
   },
 });
