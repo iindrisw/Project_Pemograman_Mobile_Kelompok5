@@ -16,8 +16,32 @@ export default function OnboardingScreen({ navigation }) {
   const scrollViewRef = useRef(null);
   const [activeSection, setActiveSection] = useState('Home');
 
-  const vennSize = width * 0.85;
-  const circleSize = vennSize * 0.45;
+  /* ---------- UKURAN VENN DIAGRAM (semua turunan dari lebar layar) ---------- */
+  const RING_RATIO = 0.8;                 // ring di dalam PNG ±80% dari ukuran gambar. Ubah kalau lingkaran kurang/lebih menimpa.
+  const D = width * 0.4;                  // diameter ring yang terlihat
+  const box = D / RING_RATIO;             // ukuran gambar sebenarnya
+  const spreadX = width * 0.17;           // jarak pusat lingkaran bawah ke tengah (makin kecil = makin menimpa)
+  const spreadY = width * 0.3;            // jarak vertikal lingkaran atas ke lingkaran bawah
+  const oy = width * 0.06;                // ruang kosong di atas diagram
+  const cTop = { x: width / 2, y: oy + D / 2 };
+  const cLeft = { x: width / 2 - spreadX, y: oy + D / 2 + spreadY };
+  const cRight = { x: width / 2 + spreadX, y: oy + D / 2 + spreadY };
+  const vennHeight = oy + D + spreadY + 90; // 90 = ruang untuk label di bawah lingkaran
+  const imgPos = (c) => ({
+    position: 'absolute',
+    left: c.x - box / 2,
+    top: c.y - box / 2,
+    width: box,
+    height: box,
+  });
+  const labelW = width * 0.32;
+  const freshLabelLeft = cTop.x + D / 2 + width * 0.02;
+
+  // Roti panjang: menempel di tepi kanan-bawah lingkaran NATURAL
+  const breadW = width * 0.2;
+  const breadH = breadW / 1.86;
+  const breadCx = cRight.x + (D / 2) * 0.75;
+  const breadCy = cRight.y + (D / 2) * 0.75;
 
   const handleScroll = (event) => {
     const scrollY = event.nativeEvent.contentOffset.y;
@@ -39,11 +63,21 @@ export default function OnboardingScreen({ navigation }) {
 
   return (
     <View style={styles.container}>
+      
+      <ScrollView
+        ref={scrollViewRef}
+        onScroll={handleScroll}
+        scrollEventThrottle={16}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ flexGrow: 1, paddingBottom: 80 }} // Tambah padding bawah biar konten tidak tertutup navbar
+      >
+        {/* ... (Isi ScrollView: Home Section & About Us Section tetap di sini) ... */}
+      </ScrollView>
 
-      {/* NAVBAR */}
-      <View style={styles.headerMobile}>
+      {/* NAVBAR PINDAH KE BAWAH (BOTTOM NAVIGATION) */}
+      <View style={styles.bottomNavbar}>
         <View style={styles.navMenuCentered}>
-          {['Home', 'About Us', 'Section 3', 'Section 4'].map((item) => (
+          {['Home', 'About Us'].map((item) => (
             <TouchableOpacity key={item} onPress={() => scrollToSection(item)}>
               <Text style={[
                 styles.navItem,
@@ -75,34 +109,29 @@ export default function OnboardingScreen({ navigation }) {
             resizeMode="cover"
           />
 
-          {/* HIJAU: teks MyBakery vertikal */}
-          <View
-            style={[
-              styles.verticalTextWrapper,
-              { left: 97 * s - 110, top: 205 * s - 25 },
-            ]}
-          >
-            <Text style={[styles.verticalText, { fontSize: 62 * s }]} numberOfLines={1}>
-              Dapur Chikara
-            </Text>
+          {/* BRAND: DAPUR (kecil, oranye) + Chikara (besar, hitam) + logo donat */}
+          <View style={[styles.brandBlock, { left: 45 * s, top: 55 * s }]}>
+            <View style={styles.brandTopRow}>
+              <View style={[styles.brandLine, { width: 50 * s }]} />
+              <Text style={[styles.brandSmall, { fontSize: 34 * s, letterSpacing: 10 * s }]}>
+                DAPUR
+              </Text>
+            </View>
+            <View style={styles.brandNameRow}>
+              <Text
+                style={[styles.brandBig, { fontSize: 120 * s, lineHeight: 134 * s }]}
+                numberOfLines={1}
+              >
+                Chikara
+              </Text>
+              <Image
+                source={require('../../assets/splash_screen/logo_spl_s.png')}
+                style={{ width: 70 * s, height: 70 * s, marginLeft: 14 * s, marginTop: 16 * s }}
+                resizeMode="contain"
+              />
+            </View>
           </View>
 
-          {/* KUNING: logo_spl_s tepat di bawah teks */}
-          <Image
-            source={require('../../assets/splash_screen/logo_spl_s.png')}
-            style={{
-              position: 'absolute',
-              left: 92 * s - 40 * s,
-              top: 442 * s - 40 * s,
-              width: 80 * s,
-              height: 80 * s,
-              zIndex: 10,
-            }}
-
-            
-            resizeMode="contain"
-
-          />
           {/* TEKS TAMBAHAN DI KANAN ATAS */}
           <View style={styles.topRightTextContainer}>
             <Text style={styles.topRightTitle}>FRESHLY BAKED</Text>
@@ -110,26 +139,26 @@ export default function OnboardingScreen({ navigation }) {
           </View>
 
           {/* MERAH + BIRU: roti besar & tombol Order Now */}
-<View style={[styles.centerHeroSection, { marginTop: 190 * s }]}>
+          <View style={[styles.centerHeroSection, { marginTop: 190 * s }]}>
 
-  {/* Pembungkus tinggi tetap = tinggi roti yang kelihatan */}
-  <View style={{ width: '100%', height: 760 * s, alignItems: 'center', justifyContent: 'center' }}>
-    <Image
-      source={require('../../assets/splash_screen/onboarding-bread.png')}
-      style={[styles.mainBreadImage, { width: 640 * s }]}
-      resizeMode="contain"
-    />
-  </View>
+            {/* Pembungkus tinggi tetap = tinggi roti yang kelihatan */}
+            <View style={{ width: '100%', height: 840 * s, alignItems: 'center', justifyContent: 'center' }}>
+              <Image
+                source={require('../../assets/splash_screen/onboarding-bread.png')}
+                style={[styles.mainBreadImage, { width: 640 * s }]}
+                resizeMode="contain"
+              />
+            </View>
 
-  <TouchableOpacity
-    style={[styles.orderButton, { width: 445 * s }]}
-    onPress={() => navigation.navigate('Home')}
-  >
-    <Ionicons name="fast-food-outline" size={18} color="#fff" style={styles.buttonIconLeft} />
-    <Text style={styles.orderButtonText}>ORDER NOW</Text>
-    <Ionicons name="arrow-forward" size={18} color="#fff" />
-  </TouchableOpacity>
-</View>
+            <TouchableOpacity
+              style={[styles.orderButton, { width: 445 * s }]}
+              onPress={() => navigation.navigate('Signup')}
+            >
+              <Ionicons name="fast-food-outline" size={18} color="#fff" style={styles.buttonIconLeft} />
+              <Text style={styles.orderButtonText}>ORDER NOW</Text>
+              <Ionicons name="arrow-forward" size={18} color="#fff" />
+            </TouchableOpacity>
+          </View>
 
           {/* ORANYE: kue kecil + teks deskripsi */}
           <View
@@ -165,36 +194,87 @@ export default function OnboardingScreen({ navigation }) {
             <Ionicons name="arrow-forward" size={16} color="#fff" style={{ marginLeft: 10 }} />
           </TouchableOpacity>
 
-          {/* VENN DIAGRAM 3 LINGKARAN */}
-          <View style={[styles.vennContainer, { width: vennSize, height: vennSize * 0.95 }]}>
+          {/* VENN DIAGRAM 3 LINGKARAN (saling menimpa, semua label masuk layar) */}
+          <View style={{ width, height: vennHeight }}>
 
-            {/* 1. FRESH (Atas) */}
-            <View style={[styles.circleWrapper, { top: 0, left: (vennSize - circleSize) / 2 }]}>
-              <Image source={require('../../assets/splash_screen/about_fresh.png')} style={{ width: circleSize, height: circleSize }} resizeMode="contain" />
-              <Image source={require('../../assets/splash_screen/macaron.png')} style={styles.floatingMacaron} resizeMode="contain" />
-              <View style={styles.textLabelFresh}>
-                <Text style={styles.labelTitle}>FRESH</Text>
-                <Text style={styles.labelDesc}>Freshly made healthy for you and your loved ones directly from the oven..</Text>
-              </View>
+            {/* NATURAL (kanan bawah) digambar dulu, TASTY & FRESH menimpa di atasnya */}
+            <Image
+              source={require('../../assets/splash_screen/about_natural.png')}
+              style={imgPos(cRight)}
+              resizeMode="contain"
+            />
+            <Image
+              source={require('../../assets/splash_screen/about_tasty.png')}
+              style={imgPos(cLeft)}
+              resizeMode="contain"
+            />
+            <Image
+              source={require('../../assets/splash_screen/about_fresh.png')}
+              style={imgPos(cTop)}
+              resizeMode="contain"
+            />
+
+            {/* Hiasan: macaron di kanan atas FRESH */}
+            <Image
+              source={require('../../assets/splash_screen/macaron.png')}
+              style={{
+                position: 'absolute',
+                width: width * 0.09,
+                height: width * 0.09,
+                left: cTop.x + D * 0.69 - (width * 0.09) / 2,
+                top: cTop.y - D * 0.39 - (width * 0.09) / 2,
+                zIndex: 10,
+              }}
+              resizeMode="contain"
+            />
+
+            {/* Hiasan: roti panjang menempel di tepi kanan-bawah lingkaran NATURAL */}
+            <Image
+              source={require('../../assets/splash_screen/roti_panjang.png')}
+              style={{
+                position: 'absolute',
+                width: breadW,
+                height: breadH,
+                left: breadCx - breadW / 2,
+                top: breadCy - breadH / 2,
+                transform: [{ rotate: '-35deg' }],
+                zIndex: 10,
+              }}
+              resizeMode="contain"
+            />
+
+            {/* LABEL FRESH: di kanan lingkaran atas */}
+            <View
+              style={[
+                styles.labelBox,
+                {
+                  left: freshLabelLeft,
+                  top: cTop.y - 30,
+                  width: width - freshLabelLeft - width * 0.04,
+                  alignItems: 'flex-start',
+                },
+              ]}
+            >
+              <Text style={styles.labelTitle}>FRESH</Text>
+              <Text style={[styles.labelDesc, { textAlign: 'left' }]}>
+                Freshly made healthy for you and your loved ones directly from the oven..
+              </Text>
             </View>
 
-            {/* 2. TASTY (Kiri Bawah) */}
-            <View style={[styles.circleWrapper, { bottom: 0, left: 10 }]}>
-              <Image source={require('../../assets/splash_screen/about_tasty.png')} style={{ width: circleSize, height: circleSize }} resizeMode="contain" />
-              <View style={styles.textLabelTasty}>
-                <Text style={styles.labelTitle}>TASTY</Text>
-                <Text style={styles.labelDesc}>Freshly made healthy for you and your loved ones directly from the oven..</Text>
-              </View>
+            {/* LABEL TASTY: di bawah lingkaran kiri */}
+            <View style={[styles.labelBox, { left: cLeft.x - labelW / 2, top: cLeft.y + D / 2 + 8, width: labelW }]}>
+              <Text style={styles.labelTitle}>TASTY</Text>
+              <Text style={styles.labelDesc}>
+                Freshly made healthy for you and your loved ones directly from the oven..
+              </Text>
             </View>
 
-            {/* 3. NATURAL (Kanan Bawah) */}
-            <View style={[styles.circleWrapper, { bottom: 0, right: 10 }]}>
-              <Image source={require('../../assets/splash_screen/about_natural.png')} style={{ width: circleSize, height: circleSize }} resizeMode="contain" />
-              <Image source={require('../../assets/splash_screen/roti_panjang.png')} style={styles.floatingBread} resizeMode="contain" />
-              <View style={styles.textLabelNatural}>
-                <Text style={styles.labelTitle}>NATURAL</Text>
-                <Text style={styles.labelDesc}>Freshly made healthy for you and your loved ones directly from the oven..</Text>
-              </View>
+            {/* LABEL NATURAL: di bawah lingkaran kanan */}
+            <View style={[styles.labelBox, { left: cRight.x - labelW / 2, top: cRight.y + D / 2 + 8, width: labelW }]}>
+              <Text style={styles.labelTitle}>NATURAL</Text>
+              <Text style={styles.labelDesc}>
+                Freshly made healthy for you and your loved ones directly from the oven..
+              </Text>
             </View>
 
           </View>
@@ -211,25 +291,34 @@ const styles = StyleSheet.create({
     backgroundColor: '#F4F5F7',
   },
 
-  /* --- NAVBAR --- */
-  headerMobile: {
+/* --- BOTTOM NAVBAR --- */
+  bottomNavbar: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
     paddingVertical: 14,
     paddingHorizontal: 15,
-    backgroundColor: '#F4F5F7',
+    backgroundColor: '#FFFFFF', // Warna background putih bersih agar kontras
     zIndex: 99,
-    borderBottomWidth: 1,
-    borderBottomColor: '#eaeaea',
+    borderTopWidth: 1,
+    borderTopColor: '#eaeaea',
     alignItems: 'center',
+    elevation: 10, // Efek bayangan di Android
+    shadowColor: '#000', // Efek bayangan di iOS
+    shadowOffset: { width: 0, height: -3 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
   },
   navMenuCentered: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    gap: 18,
+    gap: 40, // Jarak antar menu diperlebar dikit biar pas di bawah
   },
   navItem: {
-    fontSize: 13,
-    color: '#333',
+    fontSize: 14,
+    color: '#666',
     fontWeight: '500',
   },
   navItemActive: {
@@ -256,19 +345,34 @@ const styles = StyleSheet.create({
     zIndex: 0,
   },
 
-  verticalTextWrapper: {
+  /* BRAND */
+  brandBlock: {
     position: 'absolute',
-    width: 220,
-    height: 50,
-    alignItems: 'center',
-    justifyContent: 'center',
-    transform: [{ rotate: '-90deg' }],
     zIndex: 10,
   },
-  verticalText: {
+  brandTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  brandLine: {
+    height: 3,
+    backgroundColor: '#ca6c26',
+    borderRadius: 2,
+    marginRight: 10,
+  },
+  brandSmall: {
+    fontWeight: '700',
+    color: '#ca6c26',
+  },
+  brandNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  brandBig: {
     fontWeight: '900',
-    color: '#010101',
-    letterSpacing: 1,
+    color: '#1a1a1a',
+    letterSpacing: -1,
+    flexShrink: 1,
   },
 
   centerHeroSection: {
@@ -276,9 +380,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     zIndex: 2,
   },
+
   topRightTextContainer: {
     position: 'absolute',
-    top: '12%',
+    top: '20%',
     right: 25,
     alignItems: 'flex-end',
     zIndex: 10,
@@ -295,15 +400,13 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     marginTop: 2,
   },
-  // Lebar diatur di JSX (640 * s). Ubah angka itu untuk memperbesar/memperkecil.
-  // aspectRatio = lebar / tinggi gambar; ubah kalau gambar terlihat gepeng/terpotong.
   mainBreadImage: {
-  aspectRatio: 0.7,
-  shadowColor: '#000',
-  shadowOffset: { width: 0, height: 8 },
-  shadowOpacity: 0.15,
-  shadowRadius: 10,
-},
+    aspectRatio: 0.7,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.15,
+    shadowRadius: 10,
+  },
   orderButton: {
     flexDirection: 'row',
     backgroundColor: '#ca6c26',
@@ -335,8 +438,9 @@ const styles = StyleSheet.create({
     width: '100%',
     backgroundColor: '#F4F5F7',
     alignItems: 'center',
-    paddingVertical: 40,
-    paddingHorizontal: 15,
+    paddingTop: 40,
+    paddingBottom: 30,
+    paddingHorizontal: 0, // diagram selebar layar, padding dipindah ke teks
   },
   aboutTitle: {
     fontSize: 32,
@@ -351,6 +455,7 @@ const styles = StyleSheet.create({
     maxWidth: 320,
     lineHeight: 18,
     marginBottom: 20,
+    paddingHorizontal: 15,
   },
   blackOrderButton: {
     flexDirection: 'row',
@@ -359,28 +464,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 22,
     borderRadius: 8,
     alignItems: 'center',
-    marginBottom: 35,
+    marginBottom: 25,
   },
   blackOrderButtonText: { color: '#fff', fontWeight: 'bold', fontSize: 12 },
 
-  vennContainer: {
-    position: 'relative',
-    alignSelf: 'center',
-    marginBottom: 40,
-  },
-  circleWrapper: {
+  labelBox: {
     position: 'absolute',
     alignItems: 'center',
-    justifyContent: 'center',
+    zIndex: 5,
   },
   labelTitle: { fontSize: 13, fontWeight: 'bold', color: '#000', marginBottom: 2 },
-  labelDesc: { fontSize: 8, color: '#666', lineHeight: 11, textAlign: 'center' },
-
-  textLabelFresh: { position: 'absolute', right: -95, top: '25%', width: 95 },
-  floatingMacaron: { position: 'absolute', right: -25, top: -5, width: 30, height: 30, zIndex: 10 },
-
-  textLabelTasty: { position: 'absolute', left: -95, top: '25%', width: 95 },
-
-  textLabelNatural: { position: 'absolute', bottom: -30, right: -15, width: 110, textAlign: 'center' },
-  floatingBread: { position: 'absolute', left: -35, bottom: -15, width: 65, height: 35, zIndex: 10 },
+  labelDesc: { fontSize: 9, color: '#666', lineHeight: 12, textAlign: 'center' },
 });
