@@ -1,200 +1,386 @@
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   StyleSheet,
   Text,
   View,
   Image,
-  FlatList,
   TouchableOpacity,
   useWindowDimensions,
+  ScrollView
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
-const MAX_CONTENT_WIDTH = 560; // phone-like column on laptop / web
+export default function OnboardingScreen({ navigation }) {
+  const { width, height } = useWindowDimensions();
+  const s = width / 709; // skala dari ukuran foto referensi
+  const scrollViewRef = useRef(null);
+  const [activeSection, setActiveSection] = useState('Home');
 
-/* ----------------------------- Static slide data ----------------------------- */
-const slides = [
-  {
-    id: '1',
-    title: 'Welcome to MyBakery',
-    description:
-      'Discover warm bread, fresh pastries, and delicious treats made with love, delivered straight to you.',
-    image: require('../../assets/onboarding-bread.jpg'),
-    bg: '#F0F0F0', // matches the image background so no edges are visible
-    showBrand: true,
-  },
-  {
-    id: '2',
-    title: 'How it’s made?',
-    description:
-      'A line of tasty and healthy specialities rich in fiber and vegetable protein baked specially for you and your loved ones, directly from the oven.. Taste and See, the wonders of Mybakery.',
-    image: require('../../assets/onboarding-ingredients.jpg'),
-    bg: '#F3F3F3',
-    showBrand: false,
-  },
-];
+  const vennSize = width * 0.85;
+  const circleSize = vennSize * 0.45;
 
-/* ------------------------------ Single slide view ----------------------------- */
-function Slide({ item, slideWidth, slideHeight, compact }) {
+  const handleScroll = (event) => {
+    const scrollY = event.nativeEvent.contentOffset.y;
+    if (scrollY > height * 0.5) {
+      setActiveSection('About Us');
+    } else {
+      setActiveSection('Home');
+    }
+  };
+
+  const scrollToSection = (section) => {
+    setActiveSection(section);
+    if (section === 'Home') {
+      scrollViewRef.current?.scrollTo({ y: 0, animated: true });
+    } else if (section === 'About Us') {
+      scrollViewRef.current?.scrollTo({ y: height, animated: true });
+    }
+  };
+
   return (
-    <View
-      style={[
-        styles.slide,
-        { width: slideWidth, height: slideHeight, backgroundColor: item.bg },
-      ]}
-    >
-      {/* Brand row (same height on every slide so both slides line up) */}
-      <View style={styles.brandArea}>
-        {item.showBrand && <Text style={styles.brandText}>MyBakery</Text>}
+    <View style={styles.container}>
+
+      {/* NAVBAR */}
+      <View style={styles.headerMobile}>
+        <View style={styles.navMenuCentered}>
+          {['Home', 'About Us', 'Section 3', 'Section 4'].map((item) => (
+            <TouchableOpacity key={item} onPress={() => scrollToSection(item)}>
+              <Text style={[
+                styles.navItem,
+                activeSection === item && styles.navItemActive
+              ]}>
+                {item}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
       </View>
 
-      {/* Image fills the remaining height; "contain" keeps it undistorted */}
-      <View style={styles.imageArea}>
-        <Image source={item.image} style={styles.heroImage} resizeMode="contain" />
-      </View>
+      <ScrollView
+        ref={scrollViewRef}
+        onScroll={handleScroll}
+        scrollEventThrottle={16}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ flexGrow: 1 }}
+      >
 
-      {/* Fixed-height text block → both slides get identical image size */}
-      <View style={[styles.textArea, { height: compact ? 140 : 170 }]}>
-        <Text style={[styles.title, compact && styles.titleCompact]}>{item.title}</Text>
-        <Text style={[styles.description, compact && styles.descriptionCompact]}>
-          {item.description}
-        </Text>
-      </View>
+        {/* ======================================= */}
+        {/* BAGIAN 1: HOME SECTION                  */}
+        {/* ======================================= */}
+        <View style={[styles.heroSection, { minHeight: height - 60 }]}>
+
+          <Image
+            source={require('../../assets/splash_screen/bg_circles.png')}
+            style={styles.bgCircles}
+            resizeMode="cover"
+          />
+
+          {/* HIJAU: teks MyBakery vertikal */}
+          <View
+            style={[
+              styles.verticalTextWrapper,
+              { left: 97 * s - 110, top: 205 * s - 25 },
+            ]}
+          >
+            <Text style={[styles.verticalText, { fontSize: 62 * s }]} numberOfLines={1}>
+              MyBakery
+            </Text>
+          </View>
+
+          {/* KUNING: logo_spl_s tepat di bawah teks */}
+          <Image
+            source={require('../../assets/splash_screen/logo_spl_s.png')}
+            style={{
+              position: 'absolute',
+              left: 92 * s - 40 * s,
+              top: 442 * s - 40 * s,
+              width: 80 * s,
+              height: 80 * s,
+              zIndex: 10,
+            }}
+
+            
+            resizeMode="contain"
+
+          />
+          {/* TEKS TAMBAHAN DI KANAN ATAS */}
+          <View style={styles.topRightTextContainer}>
+            <Text style={styles.topRightTitle}>FRESHLY BAKED</Text>
+            <Text style={styles.topRightSubtitle}>Everyday with love</Text>
+          </View>
+
+          {/* MERAH + BIRU: roti besar & tombol Order Now */}
+<View style={[styles.centerHeroSection, { marginTop: 190 * s }]}>
+
+  {/* Pembungkus tinggi tetap = tinggi roti yang kelihatan */}
+  <View style={{ width: '100%', height: 760 * s, alignItems: 'center', justifyContent: 'center' }}>
+    <Image
+      source={require('../../assets/splash_screen/onboarding-bread.png')}
+      style={[styles.mainBreadImage, { width: 640 * s }]}
+      resizeMode="contain"
+    />
+  </View>
+
+  <TouchableOpacity
+    style={[styles.orderButton, { width: 445 * s }]}
+    onPress={() => navigation.navigate('Home')}
+  >
+    <Ionicons name="fast-food-outline" size={18} color="#fff" style={styles.buttonIconLeft} />
+    <Text style={styles.orderButtonText}>ORDER NOW</Text>
+    <Ionicons name="arrow-forward" size={18} color="#fff" />
+  </TouchableOpacity>
+</View>
+
+          {/* ORANYE: kue kecil + teks deskripsi */}
+          <View
+            style={[
+              styles.bottomInfoRow,
+              { marginTop: 55 * s, paddingLeft: 86 * s, paddingRight: 79 * s },
+            ]}
+          >
+            <Image
+              source={require('../../assets/splash_screen/kue1_spl_s.png')}
+              style={{ width: 115 * s, height: 115 * s, marginRight: 44 * s }}
+              resizeMode="contain"
+            />
+            <Text style={styles.bottomDescription}>
+              The bakery is an establishment that produces food baked in an oven such as bread, cookies, cakes, pastries, and pies.
+            </Text>
+          </View>
+
+        </View>
+
+        {/* ======================================= */}
+        {/* BAGIAN 2: ABOUT US SECTION              */}
+        {/* ======================================= */}
+        <View style={styles.aboutSection}>
+          <Text style={styles.aboutTitle}>About Us</Text>
+          <Text style={styles.aboutSubtitle}>
+            From the harmonious union between a mixes of cereals flours and legume flours, a new line of tasty specialities rich in fiber and vegetable protein is born
+          </Text>
+
+          <TouchableOpacity style={styles.blackOrderButton}>
+            <Ionicons name="fast-food-outline" size={16} color="#ca6c26" style={styles.buttonIconLeft} />
+            <Text style={styles.blackOrderButtonText}>ORDER NOW</Text>
+            <Ionicons name="arrow-forward" size={16} color="#fff" style={{ marginLeft: 10 }} />
+          </TouchableOpacity>
+
+          {/* VENN DIAGRAM 3 LINGKARAN */}
+          <View style={[styles.vennContainer, { width: vennSize, height: vennSize * 0.95 }]}>
+
+            {/* 1. FRESH (Atas) */}
+            <View style={[styles.circleWrapper, { top: 0, left: (vennSize - circleSize) / 2 }]}>
+              <Image source={require('../../assets/splash_screen/about_fresh.png')} style={{ width: circleSize, height: circleSize }} resizeMode="contain" />
+              <Image source={require('../../assets/splash_screen/macaron.png')} style={styles.floatingMacaron} resizeMode="contain" />
+              <View style={styles.textLabelFresh}>
+                <Text style={styles.labelTitle}>FRESH</Text>
+                <Text style={styles.labelDesc}>Freshly made healthy for you and your loved ones directly from the oven..</Text>
+              </View>
+            </View>
+
+            {/* 2. TASTY (Kiri Bawah) */}
+            <View style={[styles.circleWrapper, { bottom: 0, left: 10 }]}>
+              <Image source={require('../../assets/splash_screen/about_tasty.png')} style={{ width: circleSize, height: circleSize }} resizeMode="contain" />
+              <View style={styles.textLabelTasty}>
+                <Text style={styles.labelTitle}>TASTY</Text>
+                <Text style={styles.labelDesc}>Freshly made healthy for you and your loved ones directly from the oven..</Text>
+              </View>
+            </View>
+
+            {/* 3. NATURAL (Kanan Bawah) */}
+            <View style={[styles.circleWrapper, { bottom: 0, right: 10 }]}>
+              <Image source={require('../../assets/splash_screen/about_natural.png')} style={{ width: circleSize, height: circleSize }} resizeMode="contain" />
+              <Image source={require('../../assets/splash_screen/roti_panjang.png')} style={styles.floatingBread} resizeMode="contain" />
+              <View style={styles.textLabelNatural}>
+                <Text style={styles.labelTitle}>NATURAL</Text>
+                <Text style={styles.labelDesc}>Freshly made healthy for you and your loved ones directly from the oven..</Text>
+              </View>
+            </View>
+
+          </View>
+        </View>
+
+      </ScrollView>
     </View>
   );
 }
 
-/* -------------------------------- Main screen -------------------------------- */
-export default function OnboardingScreen({ navigation }) {
-  const { width, height } = useWindowDimensions();
-  const contentWidth = Math.min(width, MAX_CONTENT_WIDTH);
-  const compact = height < 760;
-
-  const listRef = useRef(null);
-  const [listHeight, setListHeight] = useState(0);
-  const [activeIndex, setActiveIndex] = useState(0);
-  const isLastSlide = activeIndex === slides.length - 1;
-
-  // Keep the current slide aligned after the window is resized
-  useEffect(() => {
-    listRef.current?.scrollToOffset({ offset: activeIndex * contentWidth, animated: false });
-  }, [contentWidth]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const handleMomentumEnd = (e) => {
-    setActiveIndex(Math.round(e.nativeEvent.contentOffset.x / contentWidth));
-  };
-
-  // Slide 1 → Next scrolls to slide 2. Slide 2 → Next goes to Login.
-  const handleNext = () => {
-    if (isLastSlide) {
-      navigation.navigate('Login');
-    } else {
-      const next = activeIndex + 1;
-      listRef.current?.scrollToIndex({ index: next, animated: true });
-      setActiveIndex(next);
-    }
-  };
-
-  const activeBg = slides[activeIndex].bg;
-
-  return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: activeBg }]}>
-      <View style={[styles.content, { width: contentWidth }]}>
-        {/* Carousel (takes all space above the footer) */}
-        <View
-          style={styles.carousel}
-          onLayout={(e) => setListHeight(e.nativeEvent.layout.height)}
-        >
-          {listHeight > 0 && (
-            <FlatList
-              ref={listRef}
-              data={slides}
-              keyExtractor={(item) => item.id}
-              renderItem={({ item }) => (
-                <Slide
-                  item={item}
-                  slideWidth={contentWidth}
-                  slideHeight={listHeight}
-                  compact={compact}
-                />
-              )}
-              horizontal
-              pagingEnabled
-              bounces={false}
-              showsHorizontalScrollIndicator={false}
-              onMomentumScrollEnd={handleMomentumEnd}
-              getItemLayout={(_, index) => ({
-                length: contentWidth,
-                offset: contentWidth * index,
-                index,
-              })}
-            />
-          )}
-        </View>
-
-        {/* Footer: dots + button (normal flow, never overlaps the slides) */}
-        <View style={[styles.footer, { backgroundColor: activeBg }]}>
-          <View style={styles.dots}>
-            {slides.map((s, i) => (
-              <View key={s.id} style={[styles.dot, i === activeIndex && styles.dotActive]} />
-            ))}
-          </View>
-
-          <TouchableOpacity style={styles.button} activeOpacity={0.85} onPress={handleNext}>
-            <Text style={styles.buttonText}>Next</Text>
-            <Ionicons name="arrow-forward" size={22} color="#ffffff" />
-          </TouchableOpacity>
-        </View>
-      </View>
-    </SafeAreaView>
-  );
-}
-
-/* ----------------------------------- Styles ----------------------------------- */
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, alignItems: 'center' },
-  content: { flex: 1 },
-  carousel: { flex: 1 },
-
-  slide: { alignItems: 'center' },
-  brandArea: { height: 48, justifyContent: 'center' },
-  brandText: { fontSize: 24, fontWeight: 'bold', color: '#2d1a0e' },
-
-  imageArea: { flex: 1, width: '100%', minHeight: 100 },
-  heroImage: { width: '100%', height: '100%' },
-
-  textArea: { width: '100%', paddingHorizontal: 28, alignItems: 'center', paddingTop: 6 },
-  title: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: '#2d1a0e',
-    textAlign: 'center',
-    marginBottom: 10,
+  container: {
+    flex: 1,
+    backgroundColor: '#F4F5F7',
   },
-  titleCompact: { fontSize: 26, marginBottom: 6 },
-  description: { fontSize: 15, lineHeight: 22, color: '#3d2415', textAlign: 'center' },
-  descriptionCompact: { fontSize: 13, lineHeight: 19 },
 
-  footer: { paddingHorizontal: 28, paddingTop: 8, paddingBottom: 20, alignItems: 'center' },
-  dots: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 18 },
-  dot: { width: 10, height: 10, borderRadius: 5, backgroundColor: '#d4cbc5' },
-  dotActive: { width: 14, height: 14, borderRadius: 7, backgroundColor: '#ea580c' },
-
-  button: {
+  /* --- NAVBAR --- */
+  headerMobile: {
+    paddingVertical: 14,
+    paddingHorizontal: 15,
+    backgroundColor: '#F4F5F7',
+    zIndex: 99,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eaeaea',
+    alignItems: 'center',
+  },
+  navMenuCentered: {
     flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 18,
+  },
+  navItem: {
+    fontSize: 13,
+    color: '#333',
+    fontWeight: '500',
+  },
+  navItemActive: {
+    color: '#ca6c26',
+    fontWeight: 'bold',
+    textDecorationLine: 'underline',
+  },
+
+  /* --- HOME SECTION --- */
+  heroSection: {
+    width: '100%',
+    position: 'relative',
+    overflow: 'hidden',
+    alignItems: 'center',
+    paddingTop: 0,
+    paddingBottom: 30,
+  },
+  bgCircles: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    width: '100%',
+    height: '100%',
+    zIndex: 0,
+  },
+
+  verticalTextWrapper: {
+    position: 'absolute',
+    width: 220,
+    height: 50,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
-    alignSelf: 'stretch',
-    height: 56,
-    backgroundColor: '#ea580c',
-    borderRadius: 28,
-    elevation: 6,
-    shadowColor: '#ea580c',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
+    transform: [{ rotate: '-90deg' }],
+    zIndex: 10,
   },
-  buttonText: { color: '#ffffff', fontSize: 18, fontWeight: 'bold' },
+  verticalText: {
+    fontWeight: '900',
+    color: '#010101',
+    letterSpacing: 1,
+  },
+
+  centerHeroSection: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 2,
+  },
+  topRightTextContainer: {
+    position: 'absolute',
+    top: '12%',
+    right: 25,
+    alignItems: 'flex-end',
+    zIndex: 10,
+  },
+  topRightTitle: {
+    fontSize: 14,
+    fontWeight: '900',
+    color: '#ca6c26', // Warna oranye khas bakery
+    letterSpacing: 1,
+  },
+  topRightSubtitle: {
+    fontSize: 10,
+    color: '#666666',
+    fontWeight: '500',
+    marginTop: 2,
+  },
+  // Lebar diatur di JSX (640 * s). Ubah angka itu untuk memperbesar/memperkecil.
+  // aspectRatio = lebar / tinggi gambar; ubah kalau gambar terlihat gepeng/terpotong.
+  mainBreadImage: {
+  aspectRatio: 0.7,
+  shadowColor: '#000',
+  shadowOffset: { width: 0, height: 8 },
+  shadowOpacity: 0.15,
+  shadowRadius: 10,
+},
+  orderButton: {
+    flexDirection: 'row',
+    backgroundColor: '#ca6c26',
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 10,
+    elevation: 5,
+  },
+  orderButtonText: { color: '#ffffff', fontWeight: 'bold', fontSize: 13, marginHorizontal: 6 },
+  buttonIconLeft: { marginRight: 4 },
+
+  bottomInfoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    width: '100%',
+    zIndex: 10,
+  },
+  bottomDescription: {
+    flex: 1,
+    fontSize: 10,
+    color: '#555555',
+    lineHeight: 14,
+  },
+
+  /* --- ABOUT US SECTION --- */
+  aboutSection: {
+    width: '100%',
+    backgroundColor: '#F4F5F7',
+    alignItems: 'center',
+    paddingVertical: 40,
+    paddingHorizontal: 15,
+  },
+  aboutTitle: {
+    fontSize: 32,
+    fontWeight: '300',
+    color: '#ca6c26',
+    marginBottom: 8,
+  },
+  aboutSubtitle: {
+    fontSize: 12,
+    color: '#666',
+    textAlign: 'center',
+    maxWidth: 320,
+    lineHeight: 18,
+    marginBottom: 20,
+  },
+  blackOrderButton: {
+    flexDirection: 'row',
+    backgroundColor: '#000',
+    paddingVertical: 10,
+    paddingHorizontal: 22,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginBottom: 35,
+  },
+  blackOrderButtonText: { color: '#fff', fontWeight: 'bold', fontSize: 12 },
+
+  vennContainer: {
+    position: 'relative',
+    alignSelf: 'center',
+    marginBottom: 40,
+  },
+  circleWrapper: {
+    position: 'absolute',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  labelTitle: { fontSize: 13, fontWeight: 'bold', color: '#000', marginBottom: 2 },
+  labelDesc: { fontSize: 8, color: '#666', lineHeight: 11, textAlign: 'center' },
+
+  textLabelFresh: { position: 'absolute', right: -95, top: '25%', width: 95 },
+  floatingMacaron: { position: 'absolute', right: -25, top: -5, width: 30, height: 30, zIndex: 10 },
+
+  textLabelTasty: { position: 'absolute', left: -95, top: '25%', width: 95 },
+
+  textLabelNatural: { position: 'absolute', bottom: -30, right: -15, width: 110, textAlign: 'center' },
+  floatingBread: { position: 'absolute', left: -35, bottom: -15, width: 65, height: 35, zIndex: 10 },
 });
