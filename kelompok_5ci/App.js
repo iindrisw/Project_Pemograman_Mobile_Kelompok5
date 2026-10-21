@@ -8,6 +8,8 @@ import Login from './src/screens/Login';
 import Signup from './src/screens/Signup';
 import HomeScreen from './src/screens/HomeScreen';
 import ProfileScreen from './src/screens/ProfileScreen';
+import MyOrders from './src/screens/MyOrders';
+import Address from './src/screens/Address';
 
 const Stack = createNativeStackNavigator();
 
@@ -24,6 +26,8 @@ export default function App() {
           <Stack.Screen name="Signup" component={Signup} />
           <Stack.Screen name="Home" component={HomeScreen} />
           <Stack.Screen name="Profile" component={ProfileScreen} />
+          <Stack.Screen name="MyOrders" component={MyOrders} />
+          <Stack.Screen name="Address" component={Address} />
         </Stack.Navigator>
       </NavigationContainer>
     </SafeAreaProvider>
