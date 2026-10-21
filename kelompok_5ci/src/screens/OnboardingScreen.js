@@ -83,7 +83,7 @@ export default function OnboardingScreen({ navigation }) {
             ]}
           >
             <Text style={[styles.verticalText, { fontSize: 62 * s }]} numberOfLines={1}>
-              MyBakery
+              Dapur Chikara
             </Text>
           </View>
 

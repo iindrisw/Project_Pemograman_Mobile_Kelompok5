@@ -66,9 +66,9 @@ export default function HomeScreen({ navigation }) {
       <View style={styles.header}>
         <View style={styles.brandContainer}>
           <MaterialCommunityIcons name="food-croissant" size={30} color="#ea580c" />
-          <Text style={styles.brandTitle}>MyBakery</Text>
+          <Text style={styles.brandTitle}>Dapur Chikara</Text>
         </View>
-        <TouchableOpacity style={styles.iconButton}>
+        <TouchableOpacity style={styles.iconButton} onPress={() => navigation.navigate('Cart')}>
           <Ionicons name="bag-handle-outline" size={24} color="#ea580c" />
         </TouchableOpacity>
       </View>
@@ -154,7 +154,7 @@ export default function HomeScreen({ navigation }) {
       <View style={[styles.bottomNav, { height: 70 + insets.bottom, paddingBottom: insets.bottom + 8 }]}>
         <TouchableOpacity
           style={styles.navItem}
-          // TODO: connect to teammate's Catalog screen, e.g. navigation.navigate('Catalog')
+          onPress={() => navigation.navigate('Menu')}
         >
           <Ionicons name="bag-outline" size={24} color="#888" />
           <Text style={styles.navLabel}>Menu</Text>
