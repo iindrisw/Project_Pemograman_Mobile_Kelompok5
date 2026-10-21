@@ -18,13 +18,13 @@ Pembagian Jobdesk:
    Membangun antarmuka profile untuk menampilkan data user dan yg berkaitan
    Mengembangkan halaman My orders dan adress
    Mengerjakan antarmuka halaman Support
-3. Menu (search bar, set bar, search by category)Keranjang, Checkout & Transaksi (Indri Setiawati - 2488010077)
+3. Menu (search bar, set bar, search by category)Keranjang, Checkout & Transaksi, Demo (Indri Setiawati - 2488010077)
    Fokus di alur belanja sampai pembayaran
    Mengelola logika dan halaman Shopping Cart (Keranjang Belanja) beserta ringkasan harga
    Membangun halaman Addresses (alamat pengiriman) dan Payments (metode pembayaran)
    Mengembangkan halaman My Orders agar pembeli bisa melacak status pesanannya
    Membuat logika sinkronisasi untuk mengurangi stok roti saat pembayaran berhasil.
-4. Splash page, Dashboard Home (new arrivals, best sellers, carousel), new arrivals,  Payment, Setting dan support, Desain figma (Sabbicarel Edward Piris - 2488010014)
+4. Splash page, Dashboard Home (new arrivals, best sellers, carousel), new arrivals,  Payment, Setting dan support, Desain figma, wawancara dan dokumentasi (Sabbicarel Edward Piris - 2488010014)
    Sistem Home MyBakery
    Membangun Dashboard interaktif
    Membuat fitur CRUD (tambah, edit, hapus) menu roti, gambar, dan harga
