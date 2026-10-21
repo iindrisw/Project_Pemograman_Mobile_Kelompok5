@@ -1,84 +1,21 @@
-import React, { useState, useCallback } from 'react';
-import { 
-  StyleSheet, 
-  Text, 
-  View, 
-  ScrollView, 
-  TouchableOpacity, 
-  Image, 
-  SafeAreaView, 
-  TextInput 
+import React, { useState } from 'react';
+import {
+  StyleSheet,
+  Text,
+  View,
+  ScrollView,
+  TouchableOpacity,
+  Image,
+  TextInput,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons, Feather, MaterialCommunityIcons } from '@expo/vector-icons';
-import { useFocusEffect } from '@react-navigation/native';
+import { useCart } from '../context/CartContext';
 
-export default function CartScreen({ navigation, route }) {
-  const [cartItems, setCartItems] = useState([
-    { 
-      id: '101', 
-      name: 'Classic Sourdough', 
-      price: 6.50, 
-      quantity: 1, 
-      image: 'https://images.unsplash.com/photo-1589367920969-ab8e050bbb04?w=500' 
-    },
-  ]);
-
+export default function CartScreen({ navigation }) {
+  // Mengambil data dan fungsi langsung dari CartContext
+  const { cartItems, increaseQty, decreaseQty, subtotal } = useCart();
   const [orderNotes, setOrderNotes] = useState('');
-
-  // Tangkap item baru menggunakan useFocusEffect agar data menumpuk dengan benar
-  useFocusEffect(
-    useCallback(() => {
-      if (route.params?.newItem) {
-        const incomingItem = route.params.newItem;
-        
-        const formattedPrice = typeof incomingItem.price === 'string' 
-          ? parseFloat(incomingItem.price.replace('$', '')) 
-          : incomingItem.price;
-
-        setCartItems(prevItems => {
-          const existingIndex = prevItems.findIndex(item => item.id === incomingItem.id);
-          
-          if (existingIndex > -1) {
-            // Jika item sudah ada, tambah kuantitasnya
-            const updated = [...prevItems];
-            updated[existingIndex].quantity += 1;
-            return updated;
-          } else {
-            // Jika item berbeda, gabungkan ke keranjang tanpa menghapus item sebelumnya
-            return [...prevItems, {
-              id: incomingItem.id,
-              name: incomingItem.name,
-              price: formattedPrice,
-              quantity: 1,
-              image: incomingItem.image
-            }];
-          }
-        });
-
-        // Reset parameter agar tidak terpanggil berulang kali
-        navigation.setParams({ newItem: undefined, timestamp: undefined });
-      }
-    }, [route.params?.timestamp])
-  );
-
-  // Fungsi menambah jumlah kuantitas
-  const increaseQty = (id) => {
-    setCartItems(cartItems.map(item => 
-      item.id === id ? { ...item, quantity: item.quantity + 1 } : item
-    ));
-  };
-
-  // Fungsi mengurangi kuantitas, jika 0 maka otomatis terhapus
-  const decreaseQty = (id) => {
-    setCartItems(prevItems => 
-      prevItems
-        .map(item => item.id === id ? { ...item, quantity: item.quantity - 1 } : item)
-        .filter(item => item.quantity > 0)
-    );
-  };
-
-  // Hitung Subtotal secara dinamis
-  const subtotal = cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -203,8 +140,8 @@ const styles = StyleSheet.create({
   headerTitle: { fontSize: 22, fontWeight: 'bold', color: '#2d1a0e' },
   scrollContent: { paddingHorizontal: 20, paddingBottom: 100 },
   cartCard: { flexDirection: 'row', backgroundColor: '#ffffff', borderRadius: 20, padding: 12, alignItems: 'center', marginBottom: 12, borderWidth: 1, borderColor: '#ece4d9' },
-  emptyContainer: { paddingVertical: 20, alignItems: 'center' },
-  emptyText: { color: '#78716c', fontSize: 14 },
+  emptyContainer: { paddingVertical: 30, alignItems: 'center' },
+  emptyText: { color: '#78716c', fontSize: 15 },
   itemImage: { width: 60, height: 60, borderRadius: 12 },
   itemDetails: { flex: 1, marginLeft: 12 },
   itemName: { fontSize: 14, fontWeight: 'bold', color: '#2d1a0e', marginBottom: 2 },

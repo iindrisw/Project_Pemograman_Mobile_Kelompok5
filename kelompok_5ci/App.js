@@ -2,6 +2,7 @@ import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { CartProvider } from './src/context/CartContext';
 
 import OnboardingScreen from './src/screens/OnboardingScreen';
 import Login from './src/screens/Login';
@@ -10,17 +11,13 @@ import HomeScreen from './src/screens/HomeScreen';
 import ProfileScreen from './src/screens/ProfileScreen';
 import MenuScreen from './src/screens/MenuScreen';
 import CartScreen from './src/screens/CartScreen';
-import MyOrders from './src/screens/MyOrders';
-import Address from './src/screens/Address';
-import NewArrivalsScreen from './src/screens/NewArrivalsScreen';
-import { ThemeProvider } from './src/theme/ThemeContext';
 
 const Stack = createNativeStackNavigator();
 
 export default function App() {
   return (
     <SafeAreaProvider>
-      <ThemeProvider>
+      <CartProvider>
         <NavigationContainer>
           <Stack.Navigator
             initialRouteName="Onboarding"
@@ -31,15 +28,11 @@ export default function App() {
             <Stack.Screen name="Signup" component={Signup} />
             <Stack.Screen name="Home" component={HomeScreen} />
             <Stack.Screen name="Profile" component={ProfileScreen} />
-            <Stack.Screen name="MyOrders" component={MyOrders} />
-            <Stack.Screen name="Address" component={Address} />
-            <Stack.Screen name="NewArrivals" component={NewArrivalsScreen} options={{ headerShown: false }}/>
-            <Stack.Screen name="Profile" component={ProfileScreen} />
-          <Stack.Screen name="Menu" component={MenuScreen} />
-          <Stack.Screen name="Cart" component={CartScreen} />
+            <Stack.Screen name="Menu" component={MenuScreen} />
+            <Stack.Screen name="Cart" component={CartScreen} />
           </Stack.Navigator>
         </NavigationContainer>
-      </ThemeProvider>
+      </CartProvider>
     </SafeAreaProvider>
   );
 }
