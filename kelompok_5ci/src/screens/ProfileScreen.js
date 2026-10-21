@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Image,
+  Modal,
   ScrollView,
   StyleSheet,
   Text,
@@ -21,6 +22,9 @@ const profileOptions = [
 
 export default function ProfileScreen({ navigation }) {
   const insets = useSafeAreaInsets();
+  const [isPhotoPreviewVisible, setIsPhotoPreviewVisible] = useState(false);
+  const profilePhoto =
+    'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=240&h=240&fit=crop&crop=faces';
 
   const goToHome = () => navigation.navigate('Home');
   const logOut = () => {
@@ -42,13 +46,19 @@ export default function ProfileScreen({ navigation }) {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.profileHeader}>
-          <Image
-            source={{
-              uri: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=240&h=240&fit=crop&crop=faces',
-            }}
+          <TouchableOpacity
             style={styles.avatar}
-            accessibilityLabel="Profile photo"
-          />
+            onPress={() => setIsPhotoPreviewVisible(true)}
+            activeOpacity={0.8}
+            accessibilityRole="button"
+            accessibilityLabel="View profile photo"
+          >
+            <Image
+              source={{ uri: profilePhoto }}
+              style={styles.avatarImage}
+              accessibilityLabel="Profile photo"
+            />
+          </TouchableOpacity>
           <Text style={styles.name}>edward</Text>
         </View>
 
@@ -138,6 +148,30 @@ export default function ProfileScreen({ navigation }) {
           <Text style={styles.activeNavLabel}>Profile</Text>
         </View>
       </View>
+
+      <Modal
+        visible={isPhotoPreviewVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setIsPhotoPreviewVisible(false)}
+      >
+        <View style={styles.photoPreviewOverlay}>
+          <TouchableOpacity
+            style={styles.closePreviewButton}
+            onPress={() => setIsPhotoPreviewVisible(false)}
+            activeOpacity={0.8}
+            accessibilityRole="button"
+            accessibilityLabel="Close profile photo"
+          >
+            <Ionicons name="close" size={28} color="#ffffff" />
+          </TouchableOpacity>
+          <Image
+            source={{ uri: profilePhoto }}
+            style={styles.photoPreviewImage}
+            accessibilityLabel="Profile photo preview"
+          />
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -160,7 +194,12 @@ const styles = StyleSheet.create({
     width: 64,
     height: 64,
     borderRadius: 32,
+    overflow: 'hidden',
     backgroundColor: '#e8ded3',
+  },
+  avatarImage: {
+    width: '100%',
+    height: '100%',
   },
   name: {
     marginTop: 8,
@@ -239,5 +278,23 @@ const styles = StyleSheet.create({
     marginTop: 2,
     color: '#e65b16',
     fontSize: 9,
+  },
+  photoPreviewOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.9)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 24,
+  },
+  closePreviewButton: {
+    position: 'absolute',
+    top: 48,
+    right: 20,
+    padding: 8,
+  },
+  photoPreviewImage: {
+    width: '100%',
+    aspectRatio: 1,
+    borderRadius: 12,
   },
 });
