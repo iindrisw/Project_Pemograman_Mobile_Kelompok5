@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useRef } from 'react';
 import {
   StyleSheet,
   Text,
@@ -36,6 +36,31 @@ const newArrivals = [
   { id: '204', name: 'Fig & Honey Tart', price: '$6.75', image: IMG_TART },
 ];
 
+/* Slide carousel di Home (isi informasi, silakan ganti teksnya) */
+const heroSlides = [
+  {
+    id: 'h1',
+    icon: 'flame-outline',
+    tag: 'FRESHLY BAKED DAILY',
+    title: 'Warm bread, fresh pastries, made with love.',
+    image: IMG_BREAD,
+  },
+  {
+    id: 'h2',
+    icon: 'time-outline',
+    tag: 'OPEN EVERY DAY',
+    title: 'Open daily, 07:00 – 21:00. Order ahead for pickup.',
+    image: IMG_CROISSANT,
+  },
+  {
+    id: 'h3',
+    icon: 'bicycle-outline',
+    tag: 'FREE DELIVERY',
+    title: 'Free delivery on orders over $20.',
+    image: IMG_TART,
+  },
+];
+
 /* ---------------------------- Reusable ProductCard ---------------------------- */
 function ProductCard({ image, name, price, style, onAddToCart }) {
   return (
@@ -46,6 +71,65 @@ function ProductCard({ image, name, price, style, onAddToCart }) {
       <TouchableOpacity style={styles.addToCartBtn} onPress={onAddToCart} activeOpacity={0.85}>
         <Text style={styles.addToCartText}>Add to Cart</Text>
       </TouchableOpacity>
+    </View>
+  );
+}
+
+/* ------------------------------- Hero carousel ------------------------------- */
+// State "slide aktif" disimpan di dalam komponen ini supaya HomeScreen
+// tidak ikut re-render setiap kali user menggeser slide.
+function HeroCarousel({ width }) {
+  const listRef = useRef(null);
+  const [active, setActive] = useState(0);
+
+  const handleScroll = (e) => {
+    const index = Math.round(e.nativeEvent.contentOffset.x / width);
+    if (index !== active && index >= 0 && index < heroSlides.length) {
+      setActive(index);
+    }
+  };
+
+  return (
+    <View>
+      <View style={styles.carouselWrap}>
+        <FlatList
+          ref={listRef}
+          data={heroSlides}
+          keyExtractor={(item) => item.id}
+          horizontal
+          pagingEnabled
+          decelerationRate="fast"
+          showsHorizontalScrollIndicator={false}
+          getItemLayout={(_, index) => ({ length: width, offset: width * index, index })}
+          onScroll={handleScroll}
+          scrollEventThrottle={16}
+          renderItem={({ item }) => (
+            <View style={[styles.bannerContainer, { width }]}>
+              <View style={styles.bannerAccent} />
+              <View style={styles.bannerTextContainer}>
+                <View style={styles.bannerTagRow}>
+                  <Ionicons name={item.icon} size={13} color="#ea580c" />
+                  <Text style={styles.bannerSubtitle}>{item.tag}</Text>
+                </View>
+                <Text style={styles.bannerTitle}>{item.title}</Text>
+              </View>
+              <Image source={{ uri: item.image }} style={styles.bannerImage} resizeMode="cover" />
+            </View>
+          )}
+        />
+      </View>
+
+      <View style={styles.dots}>
+        {heroSlides.map((slide, i) => (
+          <TouchableOpacity
+            key={slide.id}
+            hitSlop={{ top: 10, bottom: 10, left: 6, right: 6 }}
+            onPress={() => listRef.current?.scrollToIndex({ index: i, animated: true })}
+          >
+            <View style={[styles.dot, i === active && styles.dotActive]} />
+          </TouchableOpacity>
+        ))}
+      </View>
     </View>
   );
 }
@@ -66,26 +150,15 @@ export default function HomeScreen({ navigation }) {
       <View style={styles.header}>
         <View style={styles.brandContainer}>
           <MaterialCommunityIcons name="food-croissant" size={30} color="#ea580c" />
-          <Text style={styles.brandTitle}>MyBakery</Text>
+          <Text style={styles.brandTitle}>Dapur Chikara</Text>
         </View>
         <TouchableOpacity style={styles.iconButton}>
           <Ionicons name="bag-handle-outline" size={24} color="#ea580c" />
         </TouchableOpacity>
       </View>
 
-      {/* 2. Hero banner */}
-      <View style={styles.bannerContainer}>
-        <View style={styles.bannerAccent} />
-        <View style={styles.bannerTextContainer}>
-          <Text style={styles.bannerSubtitle}>FRESHLY BAKED DAILY</Text>
-          <Text style={styles.bannerTitle}>Warm bread, fresh pastries, made with love.</Text>
-        </View>
-        <Image source={{ uri: IMG_BREAD }} style={styles.bannerImage} resizeMode="cover" />
-      </View>
-      <View style={styles.dots}>
-        <View style={[styles.dot, styles.dotActive]} />
-        <View style={styles.dot} />
-      </View>
+      {/* 2. Hero carousel (3 slide informasi) */}
+      <HeroCarousel width={width - H_PADDING * 2} />
 
       {/* 3. Categories */}
       <View style={styles.categoryContainer}>
@@ -121,7 +194,10 @@ export default function HomeScreen({ navigation }) {
       {/* 5. New Arrivals title */}
       <View style={[styles.sectionHeader, styles.sectionSpacing]}>
         <Text style={styles.sectionTitle}>New Arrivals</Text>
-        <TouchableOpacity style={styles.viewAllBtn}>
+        <TouchableOpacity
+          style={styles.viewAllBtn}
+          onPress={() => navigation.navigate('NewArrivals', { items: newArrivals })}
+        >
           <Text style={styles.viewAllText}>View all</Text>
           <Ionicons name="arrow-forward" size={14} color="#ea580c" />
         </TouchableOpacity>
@@ -196,13 +272,13 @@ const styles = StyleSheet.create({
     backgroundColor: CARD_BG,
     borderRadius: 24,
     padding: 20,
-    marginHorizontal: 20,
-    marginTop: 8,
     flexDirection: 'row',
     alignItems: 'center',
     overflow: 'hidden',
-    minHeight: 170,
+    height: 170,
   },
+  carouselWrap: { marginHorizontal: 20, marginTop: 8 },
+  bannerTagRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginBottom: 6 },
   bannerAccent: {
     position: 'absolute',
     right: -30,
@@ -217,7 +293,6 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: '700',
     color: '#ea580c',
-    marginBottom: 6,
     letterSpacing: 0.5,
   },
   bannerTitle: { fontSize: 20, fontWeight: 'bold', color: '#2d1a0e', lineHeight: 26 },
@@ -233,7 +308,7 @@ const styles = StyleSheet.create({
   },
   dots: { flexDirection: 'row', justifyContent: 'center', gap: 6, marginTop: 10 },
   dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#d9d4cc' },
-  dotActive: { backgroundColor: '#ea580c' },
+  dotActive: { width: 22, backgroundColor: '#ea580c' },
 
   categoryContainer: {
     flexDirection: 'row',

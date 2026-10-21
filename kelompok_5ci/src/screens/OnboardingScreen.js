@@ -17,7 +17,7 @@ export default function OnboardingScreen({ navigation }) {
   const [activeSection, setActiveSection] = useState('Home');
 
   /* ---------- UKURAN VENN DIAGRAM (semua turunan dari lebar layar) ---------- */
-  const RING_RATIO = 0.8;                 // ring di dalam PNG hanya ±70% dari ukuran gambar. Ubah kalau lingkaran kurang/lebih menimpa.
+  const RING_RATIO = 0.8;                 // ring di dalam PNG ±80% dari ukuran gambar. Ubah kalau lingkaran kurang/lebih menimpa.
   const D = width * 0.4;                  // diameter ring yang terlihat
   const box = D / RING_RATIO;             // ukuran gambar sebenarnya
   const spreadX = width * 0.17;           // jarak pusat lingkaran bawah ke tengah (makin kecil = makin menimpa)
@@ -36,6 +36,12 @@ export default function OnboardingScreen({ navigation }) {
   });
   const labelW = width * 0.32;
   const freshLabelLeft = cTop.x + D / 2 + width * 0.02;
+
+  // Roti panjang: menempel di tepi kanan-bawah lingkaran NATURAL
+  const breadW = width * 0.2;
+  const breadH = breadW / 1.86;
+  const breadCx = cRight.x + (D / 2) * 0.75;
+  const breadCy = cRight.y + (D / 2) * 0.75;
 
   const handleScroll = (event) => {
     const scrollY = event.nativeEvent.contentOffset.y;
@@ -57,11 +63,21 @@ export default function OnboardingScreen({ navigation }) {
 
   return (
     <View style={styles.container}>
+      
+      <ScrollView
+        ref={scrollViewRef}
+        onScroll={handleScroll}
+        scrollEventThrottle={16}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ flexGrow: 1, paddingBottom: 80 }} // Tambah padding bawah biar konten tidak tertutup navbar
+      >
+        {/* ... (Isi ScrollView: Home Section & About Us Section tetap di sini) ... */}
+      </ScrollView>
 
-      {/* NAVBAR */}
-      <View style={styles.headerMobile}>
+      {/* NAVBAR PINDAH KE BAWAH (BOTTOM NAVIGATION) */}
+      <View style={styles.bottomNavbar}>
         <View style={styles.navMenuCentered}>
-          {['Home', 'About Us', 'Section 3', 'Section 4'].map((item) => (
+          {['Home', 'About Us'].map((item) => (
             <TouchableOpacity key={item} onPress={() => scrollToSection(item)}>
               <Text style={[
                 styles.navItem,
@@ -93,31 +109,29 @@ export default function OnboardingScreen({ navigation }) {
             resizeMode="cover"
           />
 
-          {/* HIJAU: teks MyBakery vertikal */}
-          <View
-            style={[
-              styles.verticalTextWrapper,
-              { left: 97 * s - 110, top: 205 * s - 25 },
-            ]}
-          >
-            <Text style={[styles.verticalText, { fontSize: 62 * s }]} numberOfLines={1}>
-              MyBakery
-            </Text>
+          {/* BRAND: DAPUR (kecil, oranye) + Chikara (besar, hitam) + logo donat */}
+          <View style={[styles.brandBlock, { left: 45 * s, top: 55 * s }]}>
+            <View style={styles.brandTopRow}>
+              <View style={[styles.brandLine, { width: 50 * s }]} />
+              <Text style={[styles.brandSmall, { fontSize: 34 * s, letterSpacing: 10 * s }]}>
+                DAPUR
+              </Text>
+            </View>
+            <View style={styles.brandNameRow}>
+              <Text
+                style={[styles.brandBig, { fontSize: 120 * s, lineHeight: 134 * s }]}
+                numberOfLines={1}
+              >
+                Chikara
+              </Text>
+              <Image
+                source={require('../../assets/splash_screen/logo_spl_s.png')}
+                style={{ width: 70 * s, height: 70 * s, marginLeft: 14 * s, marginTop: 16 * s }}
+                resizeMode="contain"
+              />
+            </View>
           </View>
 
-          {/* KUNING: logo_spl_s tepat di bawah teks */}
-          <Image
-            source={require('../../assets/splash_screen/logo_spl_s.png')}
-            style={{
-              position: 'absolute',
-              left: 92 * s - 40 * s,
-              top: 442 * s - 40 * s,
-              width: 80 * s,
-              height: 80 * s,
-              zIndex: 10,
-            }}
-            resizeMode="contain"
-          />
           {/* TEKS TAMBAHAN DI KANAN ATAS */}
           <View style={styles.topRightTextContainer}>
             <Text style={styles.topRightTitle}>FRESHLY BAKED</Text>
@@ -183,7 +197,7 @@ export default function OnboardingScreen({ navigation }) {
           {/* VENN DIAGRAM 3 LINGKARAN (saling menimpa, semua label masuk layar) */}
           <View style={{ width, height: vennHeight }}>
 
-            {/* 3. NATURAL (kanan bawah) digambar dulu, TASTY & FRESH menimpa di atasnya */}
+            {/* NATURAL (kanan bawah) digambar dulu, TASTY & FRESH menimpa di atasnya */}
             <Image
               source={require('../../assets/splash_screen/about_natural.png')}
               style={imgPos(cRight)}
@@ -200,7 +214,7 @@ export default function OnboardingScreen({ navigation }) {
               resizeMode="contain"
             />
 
-            {/* Hiasan: macaron di kanan atas FRESH, roti panjang di kiri FRESH */}
+            {/* Hiasan: macaron di kanan atas FRESH */}
             <Image
               source={require('../../assets/splash_screen/macaron.png')}
               style={{
@@ -213,14 +227,17 @@ export default function OnboardingScreen({ navigation }) {
               }}
               resizeMode="contain"
             />
+
+            {/* Hiasan: roti panjang menempel di tepi kanan-bawah lingkaran NATURAL */}
             <Image
               source={require('../../assets/splash_screen/roti_panjang.png')}
               style={{
                 position: 'absolute',
-                width: width * 0.18,
-                height: width * 0.097,
-                left: width * 0.05,
-                top: cTop.y - (width * 0.097) / 2,
+                width: breadW,
+                height: breadH,
+                left: breadCx - breadW / 2,
+                top: breadCy - breadH / 2,
+                transform: [{ rotate: '-35deg' }],
                 zIndex: 10,
               }}
               resizeMode="contain"
@@ -232,7 +249,7 @@ export default function OnboardingScreen({ navigation }) {
                 styles.labelBox,
                 {
                   left: freshLabelLeft,
-                  top: cTop.y - 22,
+                  top: cTop.y - 30,
                   width: width - freshLabelLeft - width * 0.04,
                   alignItems: 'flex-start',
                 },
@@ -274,25 +291,34 @@ const styles = StyleSheet.create({
     backgroundColor: '#F4F5F7',
   },
 
-  /* --- NAVBAR --- */
-  headerMobile: {
+/* --- BOTTOM NAVBAR --- */
+  bottomNavbar: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
     paddingVertical: 14,
     paddingHorizontal: 15,
-    backgroundColor: '#F4F5F7',
+    backgroundColor: '#FFFFFF', // Warna background putih bersih agar kontras
     zIndex: 99,
-    borderBottomWidth: 1,
-    borderBottomColor: '#eaeaea',
+    borderTopWidth: 1,
+    borderTopColor: '#eaeaea',
     alignItems: 'center',
+    elevation: 10, // Efek bayangan di Android
+    shadowColor: '#000', // Efek bayangan di iOS
+    shadowOffset: { width: 0, height: -3 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
   },
   navMenuCentered: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    gap: 18,
+    gap: 40, // Jarak antar menu diperlebar dikit biar pas di bawah
   },
   navItem: {
-    fontSize: 13,
-    color: '#333',
+    fontSize: 14,
+    color: '#666',
     fontWeight: '500',
   },
   navItemActive: {
@@ -319,19 +345,34 @@ const styles = StyleSheet.create({
     zIndex: 0,
   },
 
-  verticalTextWrapper: {
+  /* BRAND */
+  brandBlock: {
     position: 'absolute',
-    width: 220,
-    height: 50,
-    alignItems: 'center',
-    justifyContent: 'center',
-    transform: [{ rotate: '-90deg' }],
     zIndex: 10,
   },
-  verticalText: {
+  brandTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  brandLine: {
+    height: 3,
+    backgroundColor: '#ca6c26',
+    borderRadius: 2,
+    marginRight: 10,
+  },
+  brandSmall: {
+    fontWeight: '700',
+    color: '#ca6c26',
+  },
+  brandNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  brandBig: {
     fontWeight: '900',
-    color: '#010101',
-    letterSpacing: 1,
+    color: '#1a1a1a',
+    letterSpacing: -1,
+    flexShrink: 1,
   },
 
   centerHeroSection: {
@@ -342,7 +383,7 @@ const styles = StyleSheet.create({
 
   topRightTextContainer: {
     position: 'absolute',
-    top: '12%',
+    top: '20%',
     right: 25,
     alignItems: 'flex-end',
     zIndex: 10,
