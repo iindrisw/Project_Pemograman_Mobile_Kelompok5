@@ -11,6 +11,16 @@ import { CommonActions } from '@react-navigation/native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../theme/ThemeContext';
+import FadeInView from '../components/FadeInView';
+
+// Nama route tiap menu (harus sama dengan name di Stack.Screen pada App.js)
+const routeByLabel = {
+  'My Orders': 'MyOrders',
+  'Shipping Addresses': 'Address',
+  'Payment Methods': 'Payments',
+  'Settings': 'Settings',
+  'Help & Support': 'Support',
+};
 
 const profileOptions = [
   { label: 'My Orders', icon: 'bag-handle-outline' },
@@ -37,6 +47,7 @@ export default function ProfileScreen({ navigation }) {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
+<FadeInView distance={12} duration={350} style={{ flex: 1 }}>
       <ScrollView
         contentContainerStyle={[
           styles.scrollContent,
@@ -69,16 +80,12 @@ export default function ProfileScreen({ navigation }) {
               </>
             );
 
-            if (option.label === 'My Orders' || option.label === 'Shipping Addresses') {
+            if (routeByLabel[option.label]) {
               return (
                 <TouchableOpacity
                   key={option.label}
                   style={rowStyle}
-                  onPress={() =>
-                    navigation.navigate(
-                      option.label === 'My Orders' ? 'MyOrders' : 'Address',
-                    )
-                  }
+                  onPress={() => navigation.navigate(routeByLabel[option.label])}
                   activeOpacity={0.7}
                   accessibilityRole="button"
                 >
@@ -141,7 +148,8 @@ export default function ProfileScreen({ navigation }) {
           <Text style={styles.activeNavLabel}>Profile</Text>
         </View>
       </View>
-    </SafeAreaView>
+    </FadeInView>
+</SafeAreaView>
   );
 }
 

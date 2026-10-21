@@ -113,6 +113,7 @@ export default function Address({ navigation }) {
         <TouchableOpacity
           style={styles.addButton}
           activeOpacity={0.85}
+          onPress={() => navigation.navigate('AddAddress')}
           accessibilityRole="button"
           accessibilityLabel="Add new address"
         >
