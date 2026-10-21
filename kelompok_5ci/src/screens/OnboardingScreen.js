@@ -152,7 +152,7 @@ export default function OnboardingScreen({ navigation }) {
 
             <TouchableOpacity
               style={[styles.orderButton, { width: 445 * s }]}
-              onPress={() => navigation.navigate('Home')}
+              onPress={() => navigation.navigate('Signup')}
             >
               <Ionicons name="fast-food-outline" size={18} color="#fff" style={styles.buttonIconLeft} />
               <Text style={styles.orderButtonText}>ORDER NOW</Text>
