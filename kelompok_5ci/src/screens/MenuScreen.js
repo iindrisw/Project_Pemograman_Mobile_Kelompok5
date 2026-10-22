@@ -12,37 +12,37 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../theme/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
-import { useCart } from '../context/CartContext'; 
-
-const IMG_SOURDOUGH = 'https://images.unsplash.com/photo-1589367920969-ab8e050bbb04?w=500';
-const IMG_CROISSANT = 'https://images.unsplash.com/photo-1555507036-ab1f4038808a?w=500';
-const IMG_BREAD = 'https://images.unsplash.com/photo-1509440159596-0249088772ff?w=500';
-const IMG_TART = 'https://images.unsplash.com/photo-1519915028121-7d3463d20b13?w=500';
-
-const PRODUCTS = [
-  { id: '101', name: 'Classic Sourdough', category: 'Bread', price: '$6.50', image: IMG_SOURDOUGH },
-  { id: '102', name: 'Classic Butter Croissant', category: 'Pastries', price: '$3.50', image: IMG_CROISSANT },
-  { id: '103', name: 'Chocolate Sourdough', category: 'Bread', price: '$5.25', image: IMG_BREAD },
-  { id: '104', name: 'Lemon Tart', category: 'Cakes', price: '$4.75', image: IMG_TART },
-];
+import { useCart } from '../context/CartContext';
+import { PRODUCTS } from '../data/products';
 
 const CATEGORIES = ['All', 'Bread', 'Pastries', 'Cakes', 'Drinks'];
 
 /* ------------------------------- Kartu produk ------------------------------- */
-function GridCard({ item, width, onAdd }) {
+function GridCard({ item, width, onAdd, onPress }) {
   const { theme } = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
   return (
-    <View style={[styles.card, { width }]}>
+    <TouchableOpacity
+      style={[styles.card, { width }]}
+      activeOpacity={0.9}
+      onPress={() => onPress(item)}
+      accessibilityRole="button"
+      accessibilityLabel={`${item.name}, ${item.price}. View details`}
+    >
       <Image source={{ uri: item.image }} style={styles.cardImage} resizeMode="cover" />
       <Text style={styles.cardName} numberOfLines={2}>{item.name}</Text>
       <View style={styles.cardBottom}>
         <Text style={styles.cardPrice}>{item.price}</Text>
-        <TouchableOpacity style={styles.addBtn} onPress={() => onAdd(item)} activeOpacity={0.85}>
+        <TouchableOpacity
+          style={styles.addBtn}
+          onPress={() => onAdd(item)}
+          activeOpacity={0.85}
+          accessibilityLabel={`Add ${item.name} to cart`}
+        >
           <Ionicons name="add" size={22} color={theme.onPrimary} />
         </TouchableOpacity>
       </View>
-    </View>
+    </TouchableOpacity>
   );
 }
 
@@ -71,6 +71,8 @@ export default function MenuScreen({ navigation }) {
     addToCart(item);
     alert(`Added ${item.name} to cart!`);
   };
+
+  const openDetail = (item) => navigation.navigate('ProductDetail', { item });
 
   const renderHeader = () => (
     <View>
@@ -137,7 +139,9 @@ export default function MenuScreen({ navigation }) {
           justifyContent: 'space-between',
         }}
         contentContainerStyle={styles.scrollContent}
-        renderItem={({ item }) => <GridCard item={item} width={cardWidth} onAdd={handleAdd} />}
+        renderItem={({ item }) => (
+          <GridCard item={item} width={cardWidth} onAdd={handleAdd} onPress={openDetail} />
+        )}
       />
 
       {/* Bottom nav: sama seperti ProfileScreen (Menu | Home | Profile), item aktif = lingkaran oranye */}

@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import {
   Image,
   KeyboardAvoidingView,
@@ -11,21 +11,106 @@ import {
   View,
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { CommonActions } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../theme/ThemeContext';
 
 const breadImage = require('../../assets/splash_screen/logo_spl_s.png');
+
+/* ------------------------------- Validasi form ------------------------------- */
+// Validasi sederhana di sisi FE saja (belum terhubung backend).
+const validate = (values, isLogin) => {
+  const errors = {};
+  const username = values.username.trim();
+
+  if (!username) errors.username = 'Enter your username.';
+  else if (username.length < 3) errors.username = 'Username must be at least 3 characters.';
+  else if (!isLogin && !/^[A-Za-z0-9_.]+$/.test(username)) {
+    errors.username = 'Use letters, numbers, dots or underscores only.';
+  }
+
+  if (!values.password) errors.password = 'Enter your password.';
+  else if (isLogin && values.password.length < 6) {
+    errors.password = 'Password must be at least 6 characters.';
+  } else if (!isLogin && values.password.length < 8) {
+    errors.password = 'Use at least 8 characters.';
+  } else if (!isLogin && !/\d/.test(values.password)) {
+    errors.password = 'Include at least one number.';
+  }
+
+  if (!isLogin) {
+    if (!values.confirm) errors.confirm = 'Confirm your password.';
+    else if (values.confirm !== values.password) errors.confirm = 'Passwords don’t match.';
+  }
+
+  return errors;
+};
+
+/* Input dengan label, pesan error, dan tombol tampil/sembunyi password */
+const AuthInput = React.forwardRef(function AuthInput(
+  { label, error, secure, styles, colors, style, ...inputProps },
+  ref,
+) {
+  const [hidden, setHidden] = useState(!!secure);
+
+  return (
+    <View style={style}>
+      <Text style={styles.label}>{label}</Text>
+      <View style={[styles.inputWrap, !!error && styles.inputError]}>
+        <TextInput
+          ref={ref}
+          style={styles.inputField}
+          placeholderTextColor={colors.placeholder}
+          secureTextEntry={secure ? hidden : false}
+          selectionColor={colors.orange}
+          accessibilityLabel={label}
+          {...inputProps}
+        />
+        {secure && (
+          <TouchableOpacity
+            onPress={() => setHidden((h) => !h)}
+            hitSlop={10}
+            accessibilityRole="button"
+            accessibilityLabel={hidden ? 'Show password' : 'Hide password'}
+          >
+            <MaterialCommunityIcons
+              name={hidden ? 'eye-off-outline' : 'eye-outline'}
+              size={20}
+              color={colors.muted}
+            />
+          </TouchableOpacity>
+        )}
+      </View>
+      {!!error && <Text style={styles.errorText}>{error}</Text>}
+    </View>
+  );
+});
 
 export default function AuthScreen({ navigation, mode }) {
   const { theme } = useTheme();
   const colors = useMemo(() => makeColors(theme), [theme]);
   const styles = useMemo(() => createStyles(colors), [colors]);
   const isLogin = mode === 'login';
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
+  const [values, setValues] = useState({ username: '', password: '', confirm: '' });
+  const [touched, setTouched] = useState({});
+  const [submitted, setSubmitted] = useState(false);
+  const passwordRef = useRef(null);
+  const confirmRef = useRef(null);
+
+  const errors = useMemo(() => validate(values, isLogin), [values, isLogin]);
+  // Error tampil setelah field disentuh (blur) atau setelah tombol ditekan
+  const showError = (field) => (submitted || touched[field]) && errors[field];
+
+  const setField = (field) => (text) => setValues((v) => ({ ...v, [field]: text }));
+  const markTouched = (field) => () => setTouched((t) => ({ ...t, [field]: true }));
 
   const handleSubmit = () => {
-    navigation.navigate('Home');
+    setSubmitted(true);
+    if (Object.keys(errors).length > 0) return;
+
+    // TODO: panggil API login/register saat backend sudah ada.
+    // reset supaya tombol back tidak kembali ke halaman login/register
+    navigation.dispatch(CommonActions.reset({ index: 0, routes: [{ name: 'Home' }] }));
   };
 
   return (
@@ -108,32 +193,61 @@ export default function AuthScreen({ navigation, mode }) {
             </View>
 
             <View style={styles.form}>
-              <Text style={styles.label}>Username</Text>
-              <TextInput
-                style={styles.input}
+              <AuthInput
+                label="Username"
+                styles={styles}
+                colors={colors}
                 placeholder="Enter your username"
-                placeholderTextColor={colors.placeholder}
-                value={username}
-                onChangeText={setUsername}
+                value={values.username}
+                onChangeText={setField('username')}
+                onBlur={markTouched('username')}
+                error={showError('username')}
                 autoCapitalize="none"
                 autoCorrect={false}
                 textContentType="username"
                 returnKeyType="next"
+                onSubmitEditing={() => passwordRef.current?.focus()}
+                blurOnSubmit={false}
               />
 
-              <Text style={[styles.label, styles.passwordLabel]}>Password</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Enter your password"
-                placeholderTextColor={colors.placeholder}
-                value={password}
-                secureTextEntry
-                onChangeText={setPassword}
+              <AuthInput
+                ref={passwordRef}
+                label="Password"
+                secure
+                style={styles.fieldGap}
+                styles={styles}
+                colors={colors}
+                placeholder={isLogin ? 'Enter your password' : 'At least 8 characters, with a number'}
+                value={values.password}
+                onChangeText={setField('password')}
+                onBlur={markTouched('password')}
+                error={showError('password')}
                 autoCapitalize="none"
                 textContentType={isLogin ? 'password' : 'newPassword'}
-                returnKeyType="done"
-                onSubmitEditing={handleSubmit}
+                returnKeyType={isLogin ? 'done' : 'next'}
+                onSubmitEditing={isLogin ? handleSubmit : () => confirmRef.current?.focus()}
+                blurOnSubmit={isLogin}
               />
+
+              {!isLogin && (
+                <AuthInput
+                  ref={confirmRef}
+                  label="Confirm password"
+                  secure
+                  style={styles.fieldGap}
+                  styles={styles}
+                  colors={colors}
+                  placeholder="Re-enter your password"
+                  value={values.confirm}
+                  onChangeText={setField('confirm')}
+                  onBlur={markTouched('confirm')}
+                  error={showError('confirm')}
+                  autoCapitalize="none"
+                  textContentType="newPassword"
+                  returnKeyType="done"
+                  onSubmitEditing={handleSubmit}
+                />
+              )}
 
               {isLogin && (
                 <Text style={styles.forgotPassword}>Forgot Password?</Text>
@@ -170,6 +284,7 @@ const makeColors = (t) => ({
   placeholder: t.placeholder,
   white: t.surface,
   onPrimary: t.onPrimary,
+  danger: t.danger || '#D64545',
 });
 
 const createStyles = (colors) => StyleSheet.create({
@@ -296,18 +411,32 @@ const createStyles = (colors) => StyleSheet.create({
     fontSize: 11,
     fontWeight: '600',
   },
-  passwordLabel: {
+  fieldGap: {
     marginTop: 14,
   },
-  input: {
+  inputWrap: {
     height: 45,
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingHorizontal: 13,
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: 11,
     backgroundColor: colors.white,
+  },
+  inputField: {
+    flex: 1,
+    height: '100%',
     color: colors.ink,
     fontSize: 12,
+  },
+  inputError: {
+    borderColor: colors.danger,
+  },
+  errorText: {
+    marginTop: 5,
+    color: colors.danger,
+    fontSize: 10,
   },
   forgotPassword: {
     alignSelf: 'flex-end',
@@ -324,7 +453,7 @@ const createStyles = (colors) => StyleSheet.create({
     justifyContent: 'center',
   },
   registerButton: {
-    marginTop: 29,
+    marginTop: 22,
   },
   submitButtonText: {
     color: colors.onPrimary,
