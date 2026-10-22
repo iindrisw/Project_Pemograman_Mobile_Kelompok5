@@ -1,4 +1,4 @@
-import React, { useState, useRef, useMemo } from 'react';
+import React, { useState, useRef, useMemo, useEffect } from 'react';
 import {
   StyleSheet,
   Text,
@@ -11,6 +11,7 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTheme } from '../theme/ThemeContext';
+import { useCart } from '../context/CartContext';
 
 /* ----------------------------- Static dummy data ----------------------------- */
 const categories = [
@@ -147,6 +148,24 @@ export default function HomeScreen({ navigation }) {
 
   const { width } = useWindowDimensions();
   const insets = useSafeAreaInsets();
+
+  // Keranjang global (CartContext)
+  const { addToCart, cartItems } = useCart();
+  const cartCount = cartItems.reduce((sum, i) => sum + i.quantity, 0);
+
+  // Toast kecil sebagai konfirmasi "ditambahkan ke keranjang"
+  const [toast, setToast] = useState(null);
+  useEffect(() => {
+    if (!toast) return undefined;
+    const timer = setTimeout(() => setToast(null), 1600);
+    return () => clearTimeout(timer);
+  }, [toast]);
+
+  const handleAdd = (item) => {
+    addToCart(item);
+    setToast(`${item.name} added to cart`);
+  };
+
   const H_PADDING = 20;
   const GAP = 14;
   const gridCardWidth = (width - H_PADDING * 2 - GAP) / 2;
@@ -169,8 +188,18 @@ export default function HomeScreen({ navigation }) {
               color={theme.primary}
             />
           </TouchableOpacity>
-          <TouchableOpacity style={styles.iconButton}>
+          <TouchableOpacity
+            style={styles.iconButton}
+            onPress={() => navigation.navigate('Cart')}
+            accessibilityRole="button"
+            accessibilityLabel={`Open cart, ${cartCount} items`}
+          >
             <Ionicons name="bag-handle-outline" size={24} color={theme.primary} />
+            {cartCount > 0 && (
+              <View style={styles.cartBadge}>
+                <Text style={styles.cartBadgeText}>{cartCount > 99 ? '99+' : cartCount}</Text>
+              </View>
+            )}
           </TouchableOpacity>
         </View>
       </View>
@@ -204,6 +233,7 @@ export default function HomeScreen({ navigation }) {
             image={item.image}
             name={item.name}
             price={item.price}
+            onAddToCart={() => handleAdd(item)}
             style={{ width: 180 }}
           />
         )}
@@ -239,10 +269,18 @@ export default function HomeScreen({ navigation }) {
             image={item.image}
             name={item.name}
             price={item.price}
+            onAddToCart={() => handleAdd(item)}
             style={{ width: gridCardWidth }}
           />
         )}
       />
+
+      {toast && (
+        <View style={[styles.toast, { bottom: 90 + insets.bottom }]} pointerEvents="none">
+          <Ionicons name="checkmark-circle" size={18} color={theme.onPrimary} />
+          <Text style={styles.toastText} numberOfLines={1}>{toast}</Text>
+        </View>
+      )}
 
       {/* Fixed bottom navigation (outside the scroller) */}
       <View style={[styles.bottomNav, { height: 70 + insets.bottom, paddingBottom: insets.bottom + 8 }]}>
@@ -286,6 +324,35 @@ const createStyles = (t) =>
     brandTitle: { fontSize: 22, fontWeight: 'bold', color: t.text },
     headerActions: { flexDirection: 'row', alignItems: 'center', gap: 4 },
     iconButton: { padding: 6 },
+    cartBadge: {
+      position: 'absolute',
+      top: 0,
+      right: 0,
+      minWidth: 18,
+      height: 18,
+      paddingHorizontal: 4,
+      borderRadius: 9,
+      backgroundColor: t.primary,
+      borderWidth: 2,
+      borderColor: t.background,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    cartBadgeText: { color: t.onPrimary, fontSize: 9, fontWeight: '700' },
+    toast: {
+      position: 'absolute',
+      alignSelf: 'center',
+      maxWidth: '80%',
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      paddingHorizontal: 16,
+      paddingVertical: 10,
+      borderRadius: 20,
+      backgroundColor: t.primary,
+      elevation: 6,
+    },
+    toastText: { color: t.onPrimary, fontSize: 13, fontWeight: '600', flexShrink: 1 },
 
     bannerContainer: {
       backgroundColor: t.card,

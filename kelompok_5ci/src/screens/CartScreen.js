@@ -121,7 +121,9 @@ export default function CartScreen({ navigation }) {
       <View style={styles.footer}>
         <TouchableOpacity 
           style={styles.checkoutButton}
-          onPress={() => alert('Order placed successfully!')}
+          onPress={() =>
+            navigation.navigate('CheckoutSuccess', { totalAmount: `$${subtotal.toFixed(2)}` })
+          }
           activeOpacity={0.85}
         >
           <Text style={styles.checkoutButtonText}>Checkout</Text>

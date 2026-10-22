@@ -21,8 +21,8 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
 }
 
 // TODO: ganti dengan kontak asli Dapur Chikara
-const WHATSAPP_NUMBER = '6281234567890'; // format internasional, tanpa + atau 0 di depan
-const SUPPORT_EMAIL = 'support@dapurchikara.id';
+const WHATSAPP_NUMBER = '6281222884298'; // format internasional, tanpa + atau 0 di depan
+const SUPPORT_EMAIL = 'sabbicareledwardpiris15@gmail.com';
 
 const serifFont = Platform.select({ ios: 'Georgia', android: 'serif', default: 'serif' });
 
