@@ -248,7 +248,7 @@ export default function HomeScreen({ navigation }) {
       <View style={[styles.bottomNav, { height: 70 + insets.bottom, paddingBottom: insets.bottom + 8 }]}>
         <TouchableOpacity
           style={styles.navItem}
-          // TODO: connect to teammate's Catalog screen, e.g. navigation.navigate('Catalog')
+          onPress={() => navigation.navigate('Menu')}
         >
           <Ionicons name="bag-outline" size={24} color={theme.navInactive} />
           <Text style={styles.navLabel}>Menu</Text>

@@ -3,6 +3,7 @@ import { StatusBar } from 'expo-status-bar';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { CartProvider } from './src/context/CartContext';
 
 import { ThemeProvider, useTheme } from './src/theme/ThemeContext';
 
@@ -20,6 +21,8 @@ import Settings from './src/screens/Settings';
 import Support from './src/screens/Support';
 import AddAddress from './src/screens/AddAddress';
 import AddPayment from './src/screens/AddPayment';
+import MenuScreen from './src/screens/MenuScreen';
+import CartScreen from './src/screens/CartScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -70,6 +73,22 @@ export default function App() {
       <ThemeProvider>
         <RootNavigator />
       </ThemeProvider>
+      <CartProvider>
+        <NavigationContainer>
+          <Stack.Navigator
+            initialRouteName="Onboarding"
+            screenOptions={{ headerShown: false }}
+          >
+            <Stack.Screen name="Onboarding" component={OnboardingScreen} />
+            <Stack.Screen name="Login" component={Login} />
+            <Stack.Screen name="Signup" component={Signup} />
+            <Stack.Screen name="Home" component={HomeScreen} />
+            <Stack.Screen name="Profile" component={ProfileScreen} />
+            <Stack.Screen name="Menu" component={MenuScreen} />
+            <Stack.Screen name="Cart" component={CartScreen} />
+          </Stack.Navigator>
+        </NavigationContainer>
+      </CartProvider>
     </SafeAreaProvider>
   );
 }
