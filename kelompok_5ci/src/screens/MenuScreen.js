@@ -140,27 +140,37 @@ export default function MenuScreen({ navigation }) {
         renderItem={({ item }) => <GridCard item={item} width={cardWidth} onAdd={handleAdd} />}
       />
 
-      {/* Bottom Nav: Tombol Menu dibuat bulat oranye mengapung di kiri */}
+      {/* Bottom nav: sama seperti ProfileScreen (Menu | Home | Profile), item aktif = lingkaran oranye */}
       <View style={[styles.bottomNav, { height: 70 + insets.bottom, paddingBottom: insets.bottom + 8 }]}>
-        <TouchableOpacity 
-          style={styles.floatingActiveBtn} 
-          activeOpacity={0.9}
-          onPress={() => navigation.navigate('Menu')}
+        <View
+          style={styles.navItem}
+          accessibilityRole="button"
+          accessibilityState={{ selected: true }}
+          accessibilityLabel="Menu"
         >
-          <Ionicons name="bag-handle" size={26} color={theme.onPrimary} />
-        </TouchableOpacity>
+          <View style={styles.activeNavIcon}>
+            <Ionicons name="bag-outline" size={19} color={theme.onPrimary} />
+          </View>
+          <Text style={styles.activeNavLabel}>Menu</Text>
+        </View>
 
-        <TouchableOpacity 
-          style={styles.navItem} 
+        <TouchableOpacity
+          style={styles.navItem}
           onPress={() => navigation.navigate('Home')}
+          activeOpacity={0.8}
+          accessibilityRole="button"
+          accessibilityLabel="Home"
         >
           <Ionicons name="home-outline" size={24} color={theme.navInactive} />
           <Text style={styles.navLabel}>Home</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity 
-          style={styles.navItem} 
+        <TouchableOpacity
+          style={styles.navItem}
           onPress={() => navigation.navigate('Profile')}
+          activeOpacity={0.8}
+          accessibilityRole="button"
+          accessibilityLabel="Profile"
         >
           <Ionicons name="person-outline" size={24} color={theme.navInactive} />
           <Text style={styles.navLabel}>Profile</Text>
@@ -283,22 +293,29 @@ const createStyles = (t) => StyleSheet.create({
     justifyContent: 'space-around',
     alignItems: 'center',
     borderTopWidth: 1,
-    borderTopColor: t.navBorder || t.border,
+    borderTopColor: t.navBorder,
   },
-  navItem: { alignItems: 'center', minWidth: 60 },
-  navLabel: { fontSize: 11, color: t.navInactive, marginTop: 2 },
-  floatingActiveBtn: {
-    width: 58,
-    height: 58,
-    borderRadius: 29,
-    backgroundColor: t.primary,
-    justifyContent: 'center',
+  navItem: {
+    minWidth: 60,
     alignItems: 'center',
-    marginTop: -30,
-    elevation: 8,
-    shadowColor: t.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.4,
-    shadowRadius: 6,
+    justifyContent: 'center',
+  },
+  navLabel: {
+    marginTop: 2,
+    color: t.navInactive,
+    fontSize: 11,
+  },
+  activeNavIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: t.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  activeNavLabel: {
+    marginTop: 2,
+    color: t.primary,
+    fontSize: 9,
   },
 });
