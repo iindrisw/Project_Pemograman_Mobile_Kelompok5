@@ -12,7 +12,7 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../theme/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
-import { useCart } from '../context/CartContext'; // <--- Wajib diimpor untuk akses keranjang global
+import { useCart } from '../context/CartContext'; 
 
 const IMG_SOURDOUGH = 'https://images.unsplash.com/photo-1589367920969-ab8e050bbb04?w=500';
 const IMG_CROISSANT = 'https://images.unsplash.com/photo-1555507036-ab1f4038808a?w=500';
@@ -46,20 +46,6 @@ function GridCard({ item, width, onAdd }) {
   );
 }
 
-/* ------------------------------- Item bottom nav ------------------------------ */
-function NavItem({ icon, label, active, onPress }) {
-  const { theme } = useTheme();
-  const styles = useMemo(() => createStyles(theme), [theme]);
-  return (
-    <TouchableOpacity style={styles.navItem} onPress={onPress} activeOpacity={0.8}>
-      <View style={[styles.navIconWrap, active && styles.navIconWrapActive]}>
-        <Ionicons name={icon} size={active ? 22 : 26} color={active ? theme.onPrimary : theme.navInactive} />
-      </View>
-      <Text style={styles.navLabel}>{label}</Text>
-    </TouchableOpacity>
-  );
-}
-
 /* --------------------------------- Layar Menu --------------------------------- */
 export default function MenuScreen({ navigation }) {
   const { theme } = useTheme();
@@ -69,10 +55,10 @@ export default function MenuScreen({ navigation }) {
 
   const [selectedCategory, setSelectedCategory] = useState('All');
   
-  // Mengambil fungsi addToCart dari CartContext global[cite: 1]
+  // Logika Cart global
   const { addToCart } = useCart();
 
-  // Filter produk berdasarkan kategori
+  // Logika Filter kategori
   const filteredProducts = selectedCategory === 'All'
     ? PRODUCTS
     : PRODUCTS.filter(item => item.category === selectedCategory);
@@ -81,26 +67,34 @@ export default function MenuScreen({ navigation }) {
   const GAP = 12;
   const cardWidth = (width - H_PADDING * 2 - GAP) / 2;
 
-  // Fungsi saat tombol tambah (+) diklik
   const handleAdd = (item) => {
-    addToCart(item); // <--- Memasukkan produk ke keranjang global[cite: 1]
+    addToCart(item);
     alert(`Added ${item.name} to cart!`);
   };
 
   const renderHeader = () => (
     <View>
+      {/* Header dengan Title dan Aksi Kanan (Search, Filter, dan Cart disatukan) */}
       <View style={styles.header}>
         <Text style={styles.title}>Menu</Text>
         <View style={styles.headerActions}>
-          <TouchableOpacity style={styles.searchBtn} activeOpacity={0.7}>
-            <Ionicons name="search-outline" size={26} color={theme.primary} />
+          <TouchableOpacity style={styles.actionBtn} activeOpacity={0.7}>
+            <Ionicons name="search-outline" size={24} color={theme.primary} />
           </TouchableOpacity>
-          <TouchableOpacity style={styles.filterBtn} activeOpacity={0.7}>
+          <TouchableOpacity style={styles.actionBtn} activeOpacity={0.7}>
             <Ionicons name="options-outline" size={22} color={theme.primary} />
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={styles.actionBtn} 
+            activeOpacity={0.7}
+            onPress={() => navigation.navigate('Cart')}
+          >
+            <Ionicons name="bag-handle-outline" size={24} color={theme.primary} />
           </TouchableOpacity>
         </View>
       </View>
 
+      {/* Kategori horizontal */}
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.categoryContainer}>
         {CATEGORIES.map((cat, index) => (
           <TouchableOpacity
@@ -142,19 +136,35 @@ export default function MenuScreen({ navigation }) {
           marginBottom: GAP,
           justifyContent: 'space-between',
         }}
-        contentContainerStyle={{ paddingBottom: 24 }}
+        contentContainerStyle={styles.scrollContent}
         renderItem={({ item }) => <GridCard item={item} width={cardWidth} onAdd={handleAdd} />}
       />
 
-      {/* Bottom Nav: Tombol ke Cart */}
-      <View style={[styles.bottomNav, { paddingBottom: Math.max(insets.bottom, 12) }]}>
-        <NavItem
-          icon="bag-handle"
-          label="Cart"
-          onPress={() => navigation.navigate('Cart')}
-        />
-        <NavItem icon="home-outline" label="Home" onPress={() => navigation.navigate('Home')} />
-        <NavItem icon="person-outline" label="Profile" onPress={() => navigation.navigate('Profile')} />
+      {/* Bottom Nav: Tombol Menu dibuat bulat oranye mengapung di kiri */}
+      <View style={[styles.bottomNav, { height: 70 + insets.bottom, paddingBottom: insets.bottom + 8 }]}>
+        <TouchableOpacity 
+          style={styles.floatingActiveBtn} 
+          activeOpacity={0.9}
+          onPress={() => navigation.navigate('Menu')}
+        >
+          <Ionicons name="bag-handle" size={26} color={theme.onPrimary} />
+        </TouchableOpacity>
+
+        <TouchableOpacity 
+          style={styles.navItem} 
+          onPress={() => navigation.navigate('Home')}
+        >
+          <Ionicons name="home-outline" size={24} color={theme.navInactive} />
+          <Text style={styles.navLabel}>Home</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity 
+          style={styles.navItem} 
+          onPress={() => navigation.navigate('Profile')}
+        >
+          <Ionicons name="person-outline" size={24} color={theme.navInactive} />
+          <Text style={styles.navLabel}>Profile</Text>
+        </TouchableOpacity>
       </View>
     </SafeAreaView>
   );
@@ -163,6 +173,7 @@ export default function MenuScreen({ navigation }) {
 /* ----------------------------------- Styles ----------------------------------- */
 const createStyles = (t) => StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: t.background },
+  scrollContent: { paddingBottom: 120 },
 
   header: {
     flexDirection: 'row',
@@ -172,13 +183,12 @@ const createStyles = (t) => StyleSheet.create({
     paddingTop: 16,
     paddingBottom: 8,
   },
-  title: { fontSize: 28, fontWeight: 'bold', color: t.text },
-  headerActions: { flexDirection: 'row', alignItems: 'center', gap: 14 },
-  searchBtn: { padding: 4 },
-  filterBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 14,
+  title: { fontSize: 26, fontWeight: 'bold', color: t.text },
+  headerActions: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  actionBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
     backgroundColor: t.surface,
     borderWidth: 1,
     borderColor: t.border,
@@ -219,39 +229,41 @@ const createStyles = (t) => StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 24,
-    marginTop: 6,
+    marginTop: 14,
     marginBottom: 16,
   },
   subTitle: { fontSize: 19, fontWeight: 'bold', color: t.text },
   count: { fontSize: 14, color: t.textMuted },
 
   card: {
-    backgroundColor: t.surface,
-    borderRadius: 22,
+    backgroundColor: t.card || t.surface,
+    borderRadius: 20,
     padding: 12,
-    borderWidth: 1,
-    borderColor: t.border,
+    elevation: 3,
+    shadowColor: t.shadow,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.12,
+    shadowRadius: 6,
   },
   cardImage: {
     width: '100%',
-    height: 126,
-    borderRadius: 60,
-    marginBottom: 12,
+    height: 110,
+    borderRadius: 40,
+    marginBottom: 10,
   },
   cardName: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: 'bold',
     color: t.text,
-    lineHeight: 20,
     minHeight: 40,
   },
   cardBottom: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: 14,
+    marginTop: 10,
   },
-  cardPrice: { fontSize: 15, fontWeight: 'bold', color: t.text },
+  cardPrice: { fontSize: 14, color: t.textMuted, fontWeight: 'bold' },
   addBtn: {
     width: 36,
     height: 36,
@@ -262,20 +274,31 @@ const createStyles = (t) => StyleSheet.create({
   },
 
   bottomNav: {
-    flexDirection: 'row',
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
     backgroundColor: t.surface,
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    alignItems: 'center',
     borderTopWidth: 1,
-    borderTopColor: t.border,
-    paddingTop: 10,
+    borderTopColor: t.navBorder || t.border,
   },
-  navItem: { flex: 1, alignItems: 'center' },
-  navIconWrap: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+  navItem: { alignItems: 'center', minWidth: 60 },
+  navLabel: { fontSize: 11, color: t.navInactive, marginTop: 2 },
+  floatingActiveBtn: {
+    width: 58,
+    height: 58,
+    borderRadius: 29,
+    backgroundColor: t.primary,
     justifyContent: 'center',
     alignItems: 'center',
+    marginTop: -30,
+    elevation: 8,
+    shadowColor: t.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 6,
   },
-  navIconWrapActive: { backgroundColor: t.primary },
-  navLabel: { fontSize: 12, color: t.textMuted, marginTop: 4 },
 });
