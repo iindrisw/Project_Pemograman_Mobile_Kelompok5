@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "kelompok_5ci",
-    "slug": "kelompok_5ci",
+    "name": "Chikara Bakery",
+    "slug": "Chikara Bakery",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "kelompok5ci",
+    "scheme": "chikarabakery",
     "userInterfaceStyle": "automatic",
     "ios": {
       "icon": "./assets/expo.icon"
