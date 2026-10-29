@@ -173,7 +173,7 @@ export default function OnboardingScreen({ navigation }) {
               resizeMode="contain"
             />
             <Text style={styles.bottomDescription}>
-              The bakery is an establishment that produces food baked in an oven such as bread, cookies, cakes, pastries, and pies.
+              Dapur Chikara adalah tempat usaha yang memproduksi makanan yang dipanggang dalam oven seperti roti, kue kering, kue, pastri, dan pai.
             </Text>
           </View>
 
@@ -185,7 +185,7 @@ export default function OnboardingScreen({ navigation }) {
         <View style={styles.aboutSection}>
           <Text style={styles.aboutTitle}>About Us</Text>
           <Text style={styles.aboutSubtitle}>
-            From the harmonious union between a mixes of cereals flours and legume flours, a new line of tasty specialities rich in fiber and vegetable protein is born
+            Dari perpaduan harmonis antara campuran tepung sereal dan tepung legum, lahirlah lini baru produk khusus lezat yang kaya serat dan protein nabati
           </Text>
 
           <TouchableOpacity style={styles.blackOrderButton}>
@@ -257,7 +257,7 @@ export default function OnboardingScreen({ navigation }) {
             >
               <Text style={styles.labelTitle}>FRESH</Text>
               <Text style={[styles.labelDesc, { textAlign: 'left' }]}>
-                Freshly made healthy for you and your loved ones directly from the oven..
+                Dibuat segar dan sehat untuk Anda dan orang terkasih ..
               </Text>
             </View>
 
@@ -265,7 +265,7 @@ export default function OnboardingScreen({ navigation }) {
             <View style={[styles.labelBox, { left: cLeft.x - labelW / 2, top: cLeft.y + D / 2 + 8, width: labelW }]}>
               <Text style={styles.labelTitle}>TASTY</Text>
               <Text style={styles.labelDesc}>
-                Freshly made healthy for you and your loved ones directly from the oven..
+                Kehangatan Rumah, Kelezatan Autentik di Setiap Gigitan.
               </Text>
             </View>
 
@@ -273,7 +273,7 @@ export default function OnboardingScreen({ navigation }) {
             <View style={[styles.labelBox, { left: cRight.x - labelW / 2, top: cRight.y + D / 2 + 8, width: labelW }]}>
               <Text style={styles.labelTitle}>NATURAL</Text>
               <Text style={styles.labelDesc}>
-                Freshly made healthy for you and your loved ones directly from the oven..
+                Dapur Chikara: Cerita Rasa di Setiap Hidangan.
               </Text>
             </View>
 

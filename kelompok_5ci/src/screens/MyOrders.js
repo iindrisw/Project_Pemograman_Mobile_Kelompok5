@@ -10,24 +10,25 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../theme/ThemeContext';
+import BottomNav from '../components/BottomNav'; // Import BottomNav terpisah
 
 const ongoingOrders = [
   {
     id: '#1052',
-    date: '21 Oct 2026',
+    date: '21 Okt 2026',
     name: 'The breakfast box',
     details: '2 croissants · 1 sourdough',
-    price: '$24.50',
-    status: 'Preparing',
+    price: 'Rp 385.000',
+    status: 'Sedang Disiapkan',
     image: 'https://images.unsplash.com/photo-1589367920969-ab8e050bbb04?w=240&h=180&fit=crop',
   },
   {
     id: '#1049',
-    date: '20 Oct 2026',
+    date: '20 Okt 2026',
     name: 'A little afternoon joy',
     details: '4 cinnamon rolls',
-    price: '$18.00',
-    status: 'On the way',
+    price: 'Rp 285.000',
+    status: 'Dalam Perjalanan',
     image: 'https://images.unsplash.com/photo-1509365465985-25d11c17e812?w=240&h=180&fit=crop',
   },
 ];
@@ -35,20 +36,20 @@ const ongoingOrders = [
 const previousOrders = [
   {
     id: '#1048',
-    date: '12 Oct 2026',
+    date: '12 Okt 2026',
     name: 'The breakfast box',
     details: '2 croissants · 1 sourdough',
-    price: '$24.50',
-    status: 'Delivered',
+    price: 'Rp 385.000',
+    status: 'Terkirim',
     image: 'https://images.unsplash.com/photo-1589367920969-ab8e050bbb04?w=240&h=180&fit=crop',
   },
   {
     id: '#1026',
-    date: '05 Oct 2026',
+    date: '05 Okt 2026',
     name: 'A little afternoon joy',
     details: '4 cinnamon rolls',
-    price: '$18.00',
-    status: 'Delivered',
+    price: 'Rp 285.000',
+    status: 'Terkirim',
     image: 'https://images.unsplash.com/photo-1509365465985-25d11c17e812?w=240&h=180&fit=crop',
   },
   {
@@ -56,8 +57,8 @@ const previousOrders = [
     date: '28 Sep 2026',
     name: 'Your daily sourdough',
     details: '1 country loaf · 1 baguette',
-    price: '$14.50',
-    status: 'Delivered',
+    price: 'Rp 230.000',
+    status: 'Terkirim',
     image: 'https://images.unsplash.com/photo-1509440159596-0249088772ff?w=240&h=180&fit=crop',
   },
 ];
@@ -65,8 +66,10 @@ const previousOrders = [
 export default function MyOrders({ navigation }) {
   const { theme } = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
-  const [activeTab, setActiveTab] = useState('Ongoing');
-  const orders = activeTab === 'Ongoing' ? ongoingOrders : previousOrders;
+  
+  // Menggunakan key bahasa Indonesia untuk state tab ('Berjalan' atau 'Riwayat')
+  const [activeTab, setActiveTab] = useState('Berjalan');
+  const orders = activeTab === 'Berjalan' ? ongoingOrders : previousOrders;
 
   const goBack = () => {
     if (navigation.canGoBack()) {
@@ -84,27 +87,30 @@ export default function MyOrders({ navigation }) {
           onPress={goBack}
           activeOpacity={0.7}
           accessibilityRole="button"
-          accessibilityLabel="Back to Profile"
+          accessibilityLabel="Kembali ke Profil"
         >
           <Ionicons name="arrow-back" size={18} color={theme.text} />
         </TouchableOpacity>
-        <Text style={styles.title}>My Orders</Text>
+        <Text style={styles.title}>Pesanan Saya</Text>
       </View>
 
       <View style={styles.tabs}>
-        {['Ongoing', 'History'].map((tab) => {
-          const isActive = activeTab === tab;
+        {[
+          { key: 'Berjalan', label: 'Berjalan' },
+          { key: 'Riwayat', label: 'Riwayat' },
+        ].map((tab) => {
+          const isActive = activeTab === tab.key;
           return (
             <TouchableOpacity
-              key={tab}
+              key={tab.key}
               style={[styles.tab, isActive && styles.activeTab]}
-              onPress={() => setActiveTab(tab)}
+              onPress={() => setActiveTab(tab.key)}
               activeOpacity={0.8}
               accessibilityRole="tab"
               accessibilityState={{ selected: isActive }}
             >
               <Text style={[styles.tabText, isActive && styles.activeTabText]}>
-                {tab}
+                {tab.label}
               </Text>
             </TouchableOpacity>
           );
@@ -117,54 +123,60 @@ export default function MyOrders({ navigation }) {
       >
         <View style={styles.sectionHeading}>
           <Text style={styles.sectionTitle}>
-            {activeTab === 'Ongoing' ? 'IN PROGRESS' : 'BAKED & DELIVERED'}
+            {activeTab === 'Berjalan' ? 'DALAM PROSES' : 'SELESAI & TERKIRIM'}
           </Text>
           <Text style={styles.orderCount}>
-            {orders.length} {orders.length === 1 ? 'order' : 'orders'}
+            {orders.length} {orders.length === 1 ? 'pesanan' : 'pesanan'}
           </Text>
         </View>
 
-        {orders.map((order) => (
-          <View key={order.id} style={styles.orderCard}>
-            <View style={styles.cardMeta}>
-              <Text style={styles.orderDate}>{order.date} · {order.id}</Text>
-              <View
-                style={[
-                  styles.statusBadge,
-                  order.status !== 'Delivered' && styles.activeStatusBadge,
-                ]}
-              >
-                <Text
+        {orders.map((order) => {
+          const isDelivered = order.status === 'Terkirim';
+          return (
+            <View key={order.id} style={styles.orderCard}>
+              <View style={styles.cardMeta}>
+                <Text style={styles.orderDate}>{order.date} · {order.id}</Text>
+                <View
                   style={[
-                    styles.statusText,
-                    order.status !== 'Delivered' && styles.activeStatusText,
+                    styles.statusBadge,
+                    !isDelivered && styles.activeStatusBadge,
                   ]}
                 >
-                  {order.status}
-                </Text>
-              </View>
-            </View>
-
-            <View style={styles.productRow}>
-              <Image source={{ uri: order.image }} style={styles.productImage} />
-              <View style={styles.productInfo}>
-                <Text style={styles.productName}>{order.name}</Text>
-                <Text style={styles.productDetails}>{order.details}</Text>
-              </View>
-            </View>
-
-            <View style={styles.cardFooter}>
-              <Text style={styles.price}>{order.price}</Text>
-              {order.status !== 'Delivered' && (
-                <View style={styles.progressLabel}>
-                  <Ionicons name="time-outline" size={14} color={theme.primary} />
-                  <Text style={styles.progressText}>Order in progress</Text>
+                  <Text
+                    style={[
+                      styles.statusText,
+                      !isDelivered && styles.activeStatusText,
+                    ]}
+                  >
+                    {order.status}
+                  </Text>
                 </View>
-              )}
+              </View>
+
+              <View style={styles.productRow}>
+                <Image source={{ uri: order.image }} style={styles.productImage} />
+                <View style={styles.productInfo}>
+                  <Text style={styles.productName}>{order.name}</Text>
+                  <Text style={styles.productDetails}>{order.details}</Text>
+                </View>
+              </View>
+
+              <View style={styles.cardFooter}>
+                <Text style={styles.price}>{order.price}</Text>
+                {!isDelivered && (
+                  <View style={styles.progressLabel}>
+                    <Ionicons name="time-outline" size={14} color={theme.primary} />
+                    <Text style={styles.progressText}>Pesanan sedang diproses</Text>
+                  </View>
+                )}
+              </View>
             </View>
-          </View>
-        ))}
+          );
+        })}
       </ScrollView>
+
+      {/* Komponen BottomNav terpisah (aktif di tab Profil karena halaman Pesanan bagian dari akun) */}
+      <BottomNav active="Profile" />
     </SafeAreaView>
   );
 }
@@ -225,7 +237,8 @@ const createStyles = (t) => StyleSheet.create({
   },
   orderList: {
     paddingHorizontal: 20,
-    paddingBottom: 24,
+    // Memberikan ruang bawah agar konten tidak tertutup oleh BottomNav yang melayang
+    paddingBottom: 110, 
   },
   sectionHeading: {
     flexDirection: 'row',

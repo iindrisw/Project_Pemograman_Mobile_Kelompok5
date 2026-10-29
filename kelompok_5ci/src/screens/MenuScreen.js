@@ -9,13 +9,14 @@ import {
   useWindowDimensions,
   ScrollView,
 } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../theme/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
 import { useCart } from '../context/CartContext';
 import { PRODUCTS } from '../data/products';
+import BottomNav from '../components/BottomNav'; // Import BottomNav terpisah
 
-const CATEGORIES = ['All', 'Bread', 'Pastries', 'Cakes', 'Drinks'];
+const CATEGORIES = ['Semua', 'Roti', 'Pastri', 'Kue', 'Minuman'];
 
 /* ------------------------------- Kartu produk ------------------------------- */
 function GridCard({ item, width, onAdd, onPress }) {
@@ -51,15 +52,15 @@ export default function MenuScreen({ navigation }) {
   const { theme } = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const { width } = useWindowDimensions();
-  const insets = useSafeAreaInsets();
 
-  const [selectedCategory, setSelectedCategory] = useState('All');
+  // Diubah ke 'Semua' agar sinkron dengan array CATEGORIES
+  const [selectedCategory, setSelectedCategory] = useState('Semua');
   
   // Logika Cart global
   const { addToCart } = useCart();
 
   // Logika Filter kategori
-  const filteredProducts = selectedCategory === 'All'
+  const filteredProducts = selectedCategory === 'Semua'
     ? PRODUCTS
     : PRODUCTS.filter(item => item.category === selectedCategory);
 
@@ -69,14 +70,14 @@ export default function MenuScreen({ navigation }) {
 
   const handleAdd = (item) => {
     addToCart(item);
-    alert(`Added ${item.name} to cart!`);
+    alert(`Berhasil menambahkan ${item.name} ke keranjang!`);
   };
 
   const openDetail = (item) => navigation.navigate('ProductDetail', { item });
 
   const renderHeader = () => (
     <View>
-      {/* Header dengan Title dan Aksi Kanan (Search, Filter, dan Cart disatukan) */}
+      {/* Header dengan Title dan Aksi Kanan */}
       <View style={styles.header}>
         <Text style={styles.title}>Menu</Text>
         <View style={styles.headerActions}>
@@ -144,42 +145,8 @@ export default function MenuScreen({ navigation }) {
         )}
       />
 
-      {/* Bottom nav: sama seperti ProfileScreen (Menu | Home | Profile), item aktif = lingkaran oranye */}
-      <View style={[styles.bottomNav, { height: 70 + insets.bottom, paddingBottom: insets.bottom + 8 }]}>
-        <View
-          style={styles.navItem}
-          accessibilityRole="button"
-          accessibilityState={{ selected: true }}
-          accessibilityLabel="Menu"
-        >
-          <View style={styles.activeNavIcon}>
-            <Ionicons name="bag-outline" size={19} color={theme.onPrimary} />
-          </View>
-          <Text style={styles.activeNavLabel}>Menu</Text>
-        </View>
-
-        <TouchableOpacity
-          style={styles.navItem}
-          onPress={() => navigation.navigate('Home')}
-          activeOpacity={0.8}
-          accessibilityRole="button"
-          accessibilityLabel="Home"
-        >
-          <Ionicons name="home-outline" size={24} color={theme.navInactive} />
-          <Text style={styles.navLabel}>Home</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.navItem}
-          onPress={() => navigation.navigate('Profile')}
-          activeOpacity={0.8}
-          accessibilityRole="button"
-          accessibilityLabel="Profile"
-        >
-          <Ionicons name="person-outline" size={24} color={theme.navInactive} />
-          <Text style={styles.navLabel}>Profile</Text>
-        </TouchableOpacity>
-      </View>
+      {/* Menggunakan komponen BottomNav terpisah dengan indikator aktif di 'Menu' */}
+      <BottomNav active="Menu" />
     </SafeAreaView>
   );
 }
@@ -187,7 +154,7 @@ export default function MenuScreen({ navigation }) {
 /* ----------------------------------- Styles ----------------------------------- */
 const createStyles = (t) => StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: t.background },
-  scrollContent: { paddingBottom: 120 },
+  scrollContent: { paddingBottom: 120 }, // Memberi ruang agar konten terbawah tidak tertutup BottomNav
 
   header: {
     flexDirection: 'row',
@@ -285,41 +252,5 @@ const createStyles = (t) => StyleSheet.create({
     backgroundColor: t.primary,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-
-  bottomNav: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: t.surface,
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    alignItems: 'center',
-    borderTopWidth: 1,
-    borderTopColor: t.navBorder,
-  },
-  navItem: {
-    minWidth: 60,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  navLabel: {
-    marginTop: 2,
-    color: t.navInactive,
-    fontSize: 11,
-  },
-  activeNavIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: t.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  activeNavLabel: {
-    marginTop: 2,
-    color: t.primary,
-    fontSize: 9,
   },
 });

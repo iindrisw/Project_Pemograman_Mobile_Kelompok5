@@ -15,9 +15,9 @@ import { useCart } from '../context/CartContext';
 
 /* ----------------------------- Static dummy data ----------------------------- */
 const categories = [
-  { id: '1', name: 'Bread', icon: 'barley' },
-  { id: '2', name: 'Pastries', icon: 'food-croissant' },
-  { id: '3', name: 'Cakes', icon: 'cake-variant' },
+  { id: '1', name: 'Roti', icon: 'barley' },
+  { id: '2', name: 'Pastri', icon: 'food-croissant' },
+  { id: '3', name: 'Kue', icon: 'cake-variant' },
 ];
 
 const IMG_SOURDOUGH = 'https://images.unsplash.com/photo-1589367920969-ab8e050bbb04?w=500';
@@ -26,16 +26,16 @@ const IMG_BREAD = 'https://images.unsplash.com/photo-1509440159596-0249088772ff?
 const IMG_TART = 'https://images.unsplash.com/photo-1519915028121-7d3463d20b13?w=500';
 
 const bestSellers = [
-  { id: '101', name: 'Classic Sourdough', price: '$6.50', image: IMG_SOURDOUGH },
-  { id: '102', name: 'Classic Butter Croissant', price: '$3.50', image: IMG_CROISSANT },
-  { id: '103', name: 'Chocolate Sourdough', price: '$5.25', image: IMG_BREAD },
+  { id: '101', name: 'Classic Sourdough', price: 'Rp 100.000', image: IMG_SOURDOUGH },
+  { id: '102', name: 'Classic Butter Croissant', price: 'Rp 55.000', image: IMG_CROISSANT },
+  { id: '103', name: 'Chocolate Sourdough', price: 'Rp 80.000', image: IMG_BREAD },
 ];
 
 const newArrivals = [
-  { id: '201', name: 'Walnut Rye', price: '$7.00', image: IMG_SOURDOUGH },
-  { id: '202', name: 'Almond Croissant', price: '$4.25', image: IMG_CROISSANT },
-  { id: '203', name: 'Cinnamon Swirl', price: '$5.50', image: IMG_BREAD },
-  { id: '204', name: 'Fig & Honey Tart', price: '$6.75', image: IMG_TART },
+  { id: '201', name: 'Walnut Rye', price: 'Rp 110.000', image: IMG_SOURDOUGH },
+  { id: '202', name: 'Almond Croissant', price: 'Rp 65.000', image: IMG_CROISSANT },
+  { id: '203', name: 'Cinnamon Swirl', price: 'Rp 85.000', image: IMG_BREAD },
+  { id: '204', name: 'Fig & Honey Tart', price: 'Rp 105.000', image: IMG_TART },
 ];
 
 /* Slide carousel di Home (isi informasi, silakan ganti teksnya) */
@@ -43,22 +43,22 @@ const heroSlides = [
   {
     id: 'h1',
     icon: 'flame-outline',
-    tag: 'FRESHLY BAKED DAILY',
-    title: 'Warm bread, fresh pastries, made with love.',
+    tag: 'DIPANGGANG SEGAR SETIAP HARI',
+    title: 'Roti hangat, pastri segar, dibuat dengan penuh cinta.',
     image: IMG_BREAD,
   },
   {
     id: 'h2',
     icon: 'time-outline',
-    tag: 'OPEN EVERY DAY',
-    title: 'Open daily, 07:00 – 21:00. Order ahead for pickup.',
+    tag: 'BUKA SETIAP HARI',
+    title: 'Buka setiap hari, 07:00 – 21:00. Pesan lebih awal untuk diambil.',
     image: IMG_CROISSANT,
   },
   {
     id: 'h3',
     icon: 'bicycle-outline',
-    tag: 'FREE DELIVERY',
-    title: 'Free delivery on orders over $20.',
+    tag: 'GRATIS ONGKIR',
+    title: 'Gratis ongkos kirim untuk pesanan di atas Rp 300.000.',
     image: IMG_TART,
   },
 ];

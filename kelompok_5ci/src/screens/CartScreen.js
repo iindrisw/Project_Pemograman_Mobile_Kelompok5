@@ -12,6 +12,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Ionicons, Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useCart } from '../context/CartContext';
 import { useTheme } from '../theme/ThemeContext';
+import BottomNav from '../components/BottomNav'; // Import BottomNav terpisah
 
 export default function CartScreen({ navigation }) {
   const { theme } = useTheme();
@@ -31,25 +32,29 @@ export default function CartScreen({ navigation }) {
         <Text style={styles.brandTitle}>Dapur Chikara</Text>
       </View>
 
-      {/* Navigation Header (Back & My Cart) */}
+      {/* Navigation Header (Kembali & Keranjang Saya) */}
       <View style={styles.header}>
         <TouchableOpacity
           style={styles.backButton}
           onPress={() => navigation.goBack()}
           accessibilityRole="button"
-          accessibilityLabel="Go back"
+          accessibilityLabel="Kembali"
         >
           <Ionicons name="arrow-back" size={20} color={theme.text} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>My Cart</Text>
+        <Text style={styles.headerTitle}>Keranjang Saya</Text>
       </View>
 
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={[styles.scrollContent, { paddingBottom: 100 + insets.bottom }]}
+        contentContainerStyle={[
+          styles.scrollContent, 
+          // Ditambah ruang bawah (150 + insets) agar tidak tertutup oleh tombol checkout dan BottomNav
+          { paddingBottom: 150 + insets.bottom }
+        ]}
         keyboardShouldPersistTaps="handled"
       >
-        {/* List Cart Items */}
+        {/* List Item Keranjang */}
         {!isEmpty ? (
           cartItems.map((item) => (
             <View key={item.id} style={styles.cartCard}>
@@ -57,9 +62,9 @@ export default function CartScreen({ navigation }) {
 
               <View style={styles.itemDetails}>
                 <Text style={styles.itemName} numberOfLines={1}>{item.name}</Text>
-                <Text style={styles.itemUnitPrice}>${item.price.toFixed(2)} each</Text>
+                <Text style={styles.itemUnitPrice}>${item.price.toFixed(2)} / item</Text>
 
-                {/* Quantity Controller */}
+                {/* Kontrol Jumlah / Kuantitas */}
                 <View style={styles.qtyContainer}>
                   <TouchableOpacity onPress={() => decreaseQty(item.id)} style={styles.qtyBtn}>
                     <Text style={styles.qtySign}>−</Text>
@@ -79,24 +84,24 @@ export default function CartScreen({ navigation }) {
         ) : (
           <View style={styles.emptyContainer}>
             <Ionicons name="bag-handle-outline" size={40} color={theme.textMuted} />
-            <Text style={styles.emptyText}>Your cart is empty</Text>
+            <Text style={styles.emptyText}>Keranjang Anda masih kosong</Text>
           </View>
         )}
 
         {/* Tombol Pintasan Tambah Menu Lain */}
         <TouchableOpacity style={styles.addMoreButton} onPress={() => navigation.goBack()}>
           <Ionicons name="add-circle-outline" size={18} color={theme.primary} />
-          <Text style={styles.addMoreText}>Add more items from menu</Text>
+          <Text style={styles.addMoreText}>Tambah menu lainnya</Text>
         </TouchableOpacity>
 
-        {/* Order Notes Section */}
+        {/* Bagian Catatan Pesanan */}
         <View style={styles.sectionCard}>
-          <Text style={styles.sectionLabel}>Order Notes</Text>
+          <Text style={styles.sectionLabel}>Catatan Pesanan</Text>
           <View style={styles.noteInputBox}>
             <Feather name="edit-2" size={16} color={theme.primary} style={{ marginRight: 8 }} />
             <TextInput
               style={styles.textInput}
-              placeholder="Add pickup instructions or special requests"
+              placeholder="Tambahkan instruksi pengambilan atau permintaan khusus"
               placeholderTextColor={theme.textMuted}
               selectionColor={theme.primary}
               value={orderNotes}
@@ -105,9 +110,9 @@ export default function CartScreen({ navigation }) {
           </View>
         </View>
 
-        {/* Order Summary Section */}
+        {/* Bagian Ringkasan Pesanan */}
         <View style={styles.sectionCard}>
-          <Text style={styles.sectionLabel}>Order Summary</Text>
+          <Text style={styles.sectionLabel}>Ringkasan Pesanan</Text>
 
           <View style={styles.summaryRow}>
             <Text style={styles.summaryTextLabel}>Subtotal</Text>
@@ -115,8 +120,8 @@ export default function CartScreen({ navigation }) {
           </View>
 
           <View style={styles.summaryRow}>
-            <Text style={styles.summaryTextLabel}>Pickup</Text>
-            <Text style={styles.summaryFreeText}>Free</Text>
+            <Text style={styles.summaryTextLabel}>Pengambilan (Pickup)</Text>
+            <Text style={styles.summaryFreeText}>Gratis</Text>
           </View>
 
           <View style={styles.divider} />
@@ -128,8 +133,8 @@ export default function CartScreen({ navigation }) {
         </View>
       </ScrollView>
 
-      {/* Checkout Button Footer */}
-      <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 16) }]}>
+      {/* Tombol Checkout di Atas BottomNav */}
+      <View style={[styles.footer, { bottom: 70, paddingBottom: 12 }]}>
         <TouchableOpacity
           style={[styles.checkoutButton, isEmpty && styles.checkoutButtonDisabled]}
           disabled={isEmpty}
@@ -140,9 +145,12 @@ export default function CartScreen({ navigation }) {
           accessibilityRole="button"
           accessibilityState={{ disabled: isEmpty }}
         >
-          <Text style={styles.checkoutButtonText}>Checkout</Text>
+          <Text style={styles.checkoutButtonText}>Pesan Sekarang (Checkout)</Text>
         </TouchableOpacity>
       </View>
+
+      {/* Komponen BottomNav Terpisah */}
+      <BottomNav active="Menu" />
     </SafeAreaView>
   );
 }
@@ -244,14 +252,14 @@ const createStyles = (t) =>
 
     footer: {
       position: 'absolute',
-      bottom: 0,
       left: 0,
       right: 0,
       backgroundColor: t.surface,
       paddingHorizontal: 20,
-      paddingTop: 16,
+      paddingTop: 12,
       borderTopWidth: 1,
       borderTopColor: t.border,
+      zIndex: 10,
     },
     checkoutButton: { backgroundColor: t.primary, borderRadius: 16, paddingVertical: 16, alignItems: 'center' },
     checkoutButtonDisabled: { opacity: 0.45 },
