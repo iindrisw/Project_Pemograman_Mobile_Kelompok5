@@ -12,6 +12,7 @@ import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../theme/ThemeContext';
 import FadeInView from '../components/FadeInView';
+import BottomNav from '../components/BottomNav';
 
 // Nama route tiap menu (harus sama dengan name di Stack.Screen pada App.js)
 const routeByLabel = {
@@ -35,7 +36,6 @@ export default function ProfileScreen({ navigation }) {
   const styles = useMemo(() => createStyles(theme), [theme]);
   const insets = useSafeAreaInsets();
 
-  const goToHome = () => navigation.navigate('Home');
   const logOut = () => {
     navigation.dispatch(
       CommonActions.reset({
@@ -114,40 +114,7 @@ export default function ProfileScreen({ navigation }) {
         </TouchableOpacity>
       </ScrollView>
 
-      <View
-        style={[
-          styles.bottomNav,
-          { height: 70 + insets.bottom, paddingBottom: insets.bottom + 8 },
-        ]}
-      >
-        <TouchableOpacity
-          style={styles.navItem}
-          activeOpacity={0.8}
-          accessibilityRole="button"
-          accessibilityLabel="Menu"
-        >
-          <Ionicons name="bag-outline" size={24} color={theme.navInactive} />
-          <Text style={styles.navLabel}>Menu</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.navItem}
-          onPress={goToHome}
-          activeOpacity={0.8}
-          accessibilityRole="button"
-          accessibilityLabel="Back to Home"
-        >
-          <Ionicons name="home-outline" size={24} color={theme.navInactive} />
-          <Text style={styles.navLabel}>Home</Text>
-        </TouchableOpacity>
-
-        <View style={styles.navItem}>
-          <View style={styles.activeProfileIcon}>
-            <Ionicons name="person-outline" size={19} color={theme.onPrimary} />
-          </View>
-          <Text style={styles.activeNavLabel}>Profile</Text>
-        </View>
-      </View>
+      <BottomNav active="Profile" />
     </FadeInView>
 </SafeAreaView>
   );
@@ -215,40 +182,5 @@ const createStyles = (t) => StyleSheet.create({
     color: t.primary,
     fontSize: 12,
     fontWeight: '600',
-  },
-  bottomNav: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: t.surface,
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    alignItems: 'center',
-    borderTopWidth: 1,
-    borderTopColor: t.navBorder,
-  },
-  navItem: {
-    minWidth: 60,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  navLabel: {
-    marginTop: 2,
-    color: t.navInactive,
-    fontSize: 11,
-  },
-  activeProfileIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: t.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  activeNavLabel: {
-    marginTop: 2,
-    color: t.primary,
-    fontSize: 9,
   },
 });
