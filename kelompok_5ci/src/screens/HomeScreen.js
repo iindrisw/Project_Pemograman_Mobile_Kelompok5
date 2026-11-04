@@ -1,4 +1,4 @@
-import React, { useState, useRef, useMemo, useEffect } from 'react';
+import React, { useState, useRef, useMemo, useEffect, useCallback } from 'react';
 import {
   StyleSheet,
   Text,
@@ -7,17 +7,20 @@ import {
   TouchableOpacity,
   Image,
   useWindowDimensions,
+  ActivityIndicator,
 } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTheme } from '../theme/ThemeContext';
 import { useCart } from '../context/CartContext';
+import { ambilSemuaProduk } from '../lib/produk';
 
 /* ----------------------------- Static dummy data ----------------------------- */
 const categories = [
-  { id: '1', name: 'Roti', icon: 'barley' },
-  { id: '2', name: 'Pastri', icon: 'food-croissant' },
-  { id: '3', name: 'Kue', icon: 'cake-variant' },
+  { id: '1', name: 'Bread', icon: 'barley' },
+  { id: '2', name: 'Pastries', icon: 'food-croissant' },
+  { id: '3', name: 'Cakes', icon: 'cake-variant' },
 ];
 
 const IMG_SOURDOUGH = 'https://images.unsplash.com/photo-1589367920969-ab8e050bbb04?w=500';
@@ -26,16 +29,9 @@ const IMG_BREAD = 'https://images.unsplash.com/photo-1509440159596-0249088772ff?
 const IMG_TART = 'https://images.unsplash.com/photo-1519915028121-7d3463d20b13?w=500';
 
 const bestSellers = [
-  { id: '101', name: 'Classic Sourdough', price: 'Rp 100.000', image: IMG_SOURDOUGH },
-  { id: '102', name: 'Classic Butter Croissant', price: 'Rp 55.000', image: IMG_CROISSANT },
-  { id: '103', name: 'Chocolate Sourdough', price: 'Rp 80.000', image: IMG_BREAD },
-];
-
-const newArrivals = [
-  { id: '201', name: 'Walnut Rye', price: 'Rp 110.000', image: IMG_SOURDOUGH },
-  { id: '202', name: 'Almond Croissant', price: 'Rp 65.000', image: IMG_CROISSANT },
-  { id: '203', name: 'Cinnamon Swirl', price: 'Rp 85.000', image: IMG_BREAD },
-  { id: '204', name: 'Fig & Honey Tart', price: 'Rp 105.000', image: IMG_TART },
+  { id: '101', name: 'Classic Sourdough', price: '$6.50', image: IMG_SOURDOUGH },
+  { id: '102', name: 'Classic Butter Croissant', price: '$3.50', image: IMG_CROISSANT },
+  { id: '103', name: 'Chocolate Sourdough', price: '$5.25', image: IMG_BREAD },
 ];
 
 /* Slide carousel di Home (isi informasi, silakan ganti teksnya) */
@@ -43,22 +39,22 @@ const heroSlides = [
   {
     id: 'h1',
     icon: 'flame-outline',
-    tag: 'DIPANGGANG SEGAR SETIAP HARI',
-    title: 'Roti hangat, pastri segar, dibuat dengan penuh cinta.',
+    tag: 'FRESHLY BAKED DAILY',
+    title: 'Warm bread, fresh pastries, made with love.',
     image: IMG_BREAD,
   },
   {
     id: 'h2',
     icon: 'time-outline',
-    tag: 'BUKA SETIAP HARI',
-    title: 'Buka setiap hari, 07:00 – 21:00. Pesan lebih awal untuk diambil.',
+    tag: 'OPEN EVERY DAY',
+    title: 'Open daily, 07:00 – 21:00. Order ahead for pickup.',
     image: IMG_CROISSANT,
   },
   {
     id: 'h3',
     icon: 'bicycle-outline',
-    tag: 'GRATIS ONGKIR',
-    title: 'Gratis ongkos kirim untuk pesanan di atas Rp 300.000.',
+    tag: 'FREE DELIVERY',
+    title: 'Free delivery on orders over $20.',
     image: IMG_TART,
   },
 ];
@@ -161,6 +157,27 @@ export default function HomeScreen({ navigation }) {
     return () => clearTimeout(timer);
   }, [toast]);
 
+  // New Arrivals = produk terbaru dari Supabase (urut created_at desc).
+  const [produkBaru, setProdukBaru] = useState([]);
+  const [memuat, setMemuat] = useState(true);
+
+  useFocusEffect(
+    useCallback(() => {
+      let aktif = true;
+      (async () => {
+        try {
+          const data = await ambilSemuaProduk();
+          if (aktif) setProdukBaru(data);
+        } catch (e) {
+          // gagal memuat: daftar dibiarkan kosong
+        } finally {
+          if (aktif) setMemuat(false);
+        }
+      })();
+      return () => { aktif = false; };
+    }, []),
+  );
+
   const handleAdd = (item) => {
     addToCart(item);
     setToast(`${item.name} added to cart`);
@@ -244,7 +261,7 @@ export default function HomeScreen({ navigation }) {
         <Text style={styles.sectionTitle}>New Arrivals</Text>
         <TouchableOpacity
           style={styles.viewAllBtn}
-          onPress={() => navigation.navigate('NewArrivals', { items: newArrivals })}
+          onPress={() => navigation.navigate('NewArrivals', { items: produkBaru })}
         >
           <Text style={styles.viewAllText}>View all</Text>
           <Ionicons name="arrow-forward" size={14} color={theme.primary} />
@@ -257,21 +274,34 @@ export default function HomeScreen({ navigation }) {
     <SafeAreaView style={styles.safeArea} edges={['top']}>
       {/* New Arrivals: 2-column vertical FlatList that also acts as the page scroller */}
       <FlatList
-        data={newArrivals}
+        data={produkBaru.slice(0, 4)}
         keyExtractor={(item) => item.id}
         numColumns={2}
         ListHeaderComponent={renderHeader}
+        ListEmptyComponent={
+          memuat ? (
+            <ActivityIndicator size="large" color={theme.primary} style={{ marginVertical: 16 }} />
+          ) : (
+            <Text style={styles.emptyText}>Belum ada produk baru.</Text>
+          )
+        }
         showsVerticalScrollIndicator={false}
         columnWrapperStyle={{ paddingHorizontal: H_PADDING, marginBottom: GAP, justifyContent: 'space-between' }}
         contentContainerStyle={styles.scrollContent}
         renderItem={({ item }) => (
-          <ProductCard
-            image={item.image}
-            name={item.name}
-            price={item.price}
-            onAddToCart={() => handleAdd(item)}
+          <TouchableOpacity
+            activeOpacity={0.9}
             style={{ width: gridCardWidth }}
-          />
+            onPress={() => navigation.navigate('ProductDetail', { item })}
+          >
+            <ProductCard
+              image={item.image}
+              name={item.name}
+              price={item.price}
+              onAddToCart={() => handleAdd(item)}
+              style={{ width: '100%' }}
+            />
+          </TouchableOpacity>
         )}
       />
 
@@ -311,6 +341,7 @@ const createStyles = (t) =>
   StyleSheet.create({
     safeArea: { flex: 1, backgroundColor: t.background },
     scrollContent: { paddingBottom: 120 },
+    emptyText: { textAlign: 'center', color: t.textMuted, marginVertical: 16 },
 
     header: {
       flexDirection: 'row',

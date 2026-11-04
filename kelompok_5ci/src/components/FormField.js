@@ -10,14 +10,21 @@ const useFormStyles = () => {
 };
 
 /* Input teks dengan label, border berubah saat fokus, dan elemen kanan opsional */
-export function Field({ label, right, style, multiline, ...inputProps }) {
+export function Field({ label, right, style, multiline, error, ...inputProps }) {
   const { theme, styles } = useFormStyles();
   const [focused, setFocused] = useState(false);
 
   return (
     <View style={[styles.field, style]}>
       <Text style={styles.label}>{label}</Text>
-      <View style={[styles.inputBox, multiline && styles.inputBoxMulti, focused && { borderColor: theme.primary }]}>
+      <View
+        style={[
+          styles.inputBox,
+          multiline && styles.inputBoxMulti,
+          focused && { borderColor: theme.primary },
+          !!error && { borderColor: theme.danger || '#D64545' },
+        ]}
+      >
         <TextInput
           style={[styles.input, multiline && styles.inputMulti]}
           placeholderTextColor={theme.textMuted}
@@ -30,6 +37,7 @@ export function Field({ label, right, style, multiline, ...inputProps }) {
         />
         {right}
       </View>
+      {!!error && <Text style={[styles.errorText, { color: theme.danger || '#D64545' }]}>{error}</Text>}
     </View>
   );
 }
@@ -104,6 +112,7 @@ const createStyles = (t) =>
       borderColor: t.border,
       backgroundColor: t.surface,
     },
+    errorText: { marginTop: 5, fontSize: 12 },
     inputBoxMulti: { alignItems: 'flex-start', minHeight: 84, paddingVertical: 4 },
     input: { flex: 1, color: t.text, fontSize: 15, paddingVertical: 12 },
     inputMulti: { textAlignVertical: 'top', minHeight: 72 },

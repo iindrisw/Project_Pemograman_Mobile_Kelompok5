@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import {
   StyleSheet,
   Text,
@@ -8,15 +8,17 @@ import {
   Image,
   useWindowDimensions,
   ScrollView,
+  ActivityIndicator,
+  Alert,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useFocusEffect } from '@react-navigation/native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../theme/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
 import { useCart } from '../context/CartContext';
-import { PRODUCTS } from '../data/products';
-import BottomNav from '../components/BottomNav'; // Import BottomNav terpisah
+import { ambilSemuaProduk, KATEGORI } from '../lib/produk';
 
-const CATEGORIES = ['Semua', 'Roti', 'Pastri', 'Kue', 'Minuman'];
+const CATEGORIES = ['All', ...KATEGORI];
 
 /* ------------------------------- Kartu produk ------------------------------- */
 function GridCard({ item, width, onAdd, onPress }) {
@@ -52,17 +54,40 @@ export default function MenuScreen({ navigation }) {
   const { theme } = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const { width } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
 
-  // Diubah ke 'Semua' agar sinkron dengan array CATEGORIES
-  const [selectedCategory, setSelectedCategory] = useState('Semua');
+  const [selectedCategory, setSelectedCategory] = useState('All');
+
+  // Data produk dari Supabase (tabel products), diurutkan dari yang terbaru.
+  const [items, setItems] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  // useFocusEffect (bukan useEffect): muat ulang SETIAP kali Menu kembali fokus,
+  // jadi produk yang baru ditambah/diubah/dihapus langsung terlihat.
+  useFocusEffect(
+    useCallback(() => {
+      let aktif = true;
+      (async () => {
+        try {
+          const data = await ambilSemuaProduk();
+          if (aktif) setItems(data);
+        } catch (e) {
+          if (aktif) Alert.alert('Gagal memuat produk', e.message);
+        } finally {
+          if (aktif) setLoading(false);
+        }
+      })();
+      return () => { aktif = false; };
+    }, []),
+  );
   
   // Logika Cart global
   const { addToCart } = useCart();
 
   // Logika Filter kategori
-  const filteredProducts = selectedCategory === 'Semua'
-    ? PRODUCTS
-    : PRODUCTS.filter(item => item.category === selectedCategory);
+  const filteredProducts = selectedCategory === 'All'
+    ? items
+    : items.filter(item => item.category === selectedCategory);
 
   const H_PADDING = 24;
   const GAP = 12;
@@ -70,17 +95,26 @@ export default function MenuScreen({ navigation }) {
 
   const handleAdd = (item) => {
     addToCart(item);
-    alert(`Berhasil menambahkan ${item.name} ke keranjang!`);
+    alert(`Added ${item.name} to cart!`);
   };
 
   const openDetail = (item) => navigation.navigate('ProductDetail', { item });
 
   const renderHeader = () => (
     <View>
-      {/* Header dengan Title dan Aksi Kanan */}
+      {/* Header dengan Title dan Aksi Kanan (Search, Filter, dan Cart disatukan) */}
       <View style={styles.header}>
         <Text style={styles.title}>Menu</Text>
         <View style={styles.headerActions}>
+          <TouchableOpacity
+            style={styles.actionBtn}
+            activeOpacity={0.7}
+            onPress={() => navigation.navigate('AddProduct')}
+            accessibilityRole="button"
+            accessibilityLabel="Tambah produk"
+          >
+            <Ionicons name="add" size={26} color={theme.primary} />
+          </TouchableOpacity>
           <TouchableOpacity style={styles.actionBtn} activeOpacity={0.7}>
             <Ionicons name="search-outline" size={24} color={theme.primary} />
           </TouchableOpacity>
@@ -133,6 +167,13 @@ export default function MenuScreen({ navigation }) {
         keyExtractor={(item) => item.id}
         numColumns={2}
         ListHeaderComponent={renderHeader}
+        ListEmptyComponent={
+          loading ? (
+            <ActivityIndicator size="large" color={theme.primary} style={{ marginTop: 40 }} />
+          ) : (
+            <Text style={styles.emptyText}>Belum ada produk. Ketuk + untuk menambah.</Text>
+          )
+        }
         showsVerticalScrollIndicator={false}
         columnWrapperStyle={{
           paddingHorizontal: H_PADDING,
@@ -145,8 +186,42 @@ export default function MenuScreen({ navigation }) {
         )}
       />
 
-      {/* Menggunakan komponen BottomNav terpisah dengan indikator aktif di 'Menu' */}
-      <BottomNav active="Menu" />
+      {/* Bottom nav: sama seperti ProfileScreen (Menu | Home | Profile), item aktif = lingkaran oranye */}
+      <View style={[styles.bottomNav, { height: 70 + insets.bottom, paddingBottom: insets.bottom + 8 }]}>
+        <View
+          style={styles.navItem}
+          accessibilityRole="button"
+          accessibilityState={{ selected: true }}
+          accessibilityLabel="Menu"
+        >
+          <View style={styles.activeNavIcon}>
+            <Ionicons name="bag-outline" size={19} color={theme.onPrimary} />
+          </View>
+          <Text style={styles.activeNavLabel}>Menu</Text>
+        </View>
+
+        <TouchableOpacity
+          style={styles.navItem}
+          onPress={() => navigation.navigate('Home')}
+          activeOpacity={0.8}
+          accessibilityRole="button"
+          accessibilityLabel="Home"
+        >
+          <Ionicons name="home-outline" size={24} color={theme.navInactive} />
+          <Text style={styles.navLabel}>Home</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.navItem}
+          onPress={() => navigation.navigate('Profile')}
+          activeOpacity={0.8}
+          accessibilityRole="button"
+          accessibilityLabel="Profile"
+        >
+          <Ionicons name="person-outline" size={24} color={theme.navInactive} />
+          <Text style={styles.navLabel}>Profile</Text>
+        </TouchableOpacity>
+      </View>
     </SafeAreaView>
   );
 }
@@ -154,7 +229,8 @@ export default function MenuScreen({ navigation }) {
 /* ----------------------------------- Styles ----------------------------------- */
 const createStyles = (t) => StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: t.background },
-  scrollContent: { paddingBottom: 120 }, // Memberi ruang agar konten terbawah tidak tertutup BottomNav
+  scrollContent: { paddingBottom: 120 },
+  emptyText: { textAlign: 'center', color: t.textMuted, marginTop: 40, paddingHorizontal: 24 },
 
   header: {
     flexDirection: 'row',
@@ -252,5 +328,41 @@ const createStyles = (t) => StyleSheet.create({
     backgroundColor: t.primary,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+
+  bottomNav: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: t.surface,
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    alignItems: 'center',
+    borderTopWidth: 1,
+    borderTopColor: t.navBorder,
+  },
+  navItem: {
+    minWidth: 60,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  navLabel: {
+    marginTop: 2,
+    color: t.navInactive,
+    fontSize: 11,
+  },
+  activeNavIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: t.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  activeNavLabel: {
+    marginTop: 2,
+    color: t.primary,
+    fontSize: 9,
   },
 });
