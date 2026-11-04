@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import {
   StyleSheet,
   Text,
@@ -8,14 +8,17 @@ import {
   Image,
   useWindowDimensions,
   ScrollView,
+  ActivityIndicator,
+  Alert,
 } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../theme/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
 import { useCart } from '../context/CartContext';
-import { PRODUCTS } from '../data/products';
+import { ambilSemuaProduk, KATEGORI } from '../lib/produk';
 
-const CATEGORIES = ['All', 'Bread', 'Pastries', 'Cakes', 'Drinks'];
+const CATEGORIES = ['All', ...KATEGORI];
 
 /* ------------------------------- Kartu produk ------------------------------- */
 function GridCard({ item, width, onAdd, onPress }) {
@@ -54,14 +57,37 @@ export default function MenuScreen({ navigation }) {
   const insets = useSafeAreaInsets();
 
   const [selectedCategory, setSelectedCategory] = useState('All');
+
+  // Data produk dari Supabase (tabel products), diurutkan dari yang terbaru.
+  const [items, setItems] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  // useFocusEffect (bukan useEffect): muat ulang SETIAP kali Menu kembali fokus,
+  // jadi produk yang baru ditambah/diubah/dihapus langsung terlihat.
+  useFocusEffect(
+    useCallback(() => {
+      let aktif = true;
+      (async () => {
+        try {
+          const data = await ambilSemuaProduk();
+          if (aktif) setItems(data);
+        } catch (e) {
+          if (aktif) Alert.alert('Gagal memuat produk', e.message);
+        } finally {
+          if (aktif) setLoading(false);
+        }
+      })();
+      return () => { aktif = false; };
+    }, []),
+  );
   
   // Logika Cart global
   const { addToCart } = useCart();
 
   // Logika Filter kategori
   const filteredProducts = selectedCategory === 'All'
-    ? PRODUCTS
-    : PRODUCTS.filter(item => item.category === selectedCategory);
+    ? items
+    : items.filter(item => item.category === selectedCategory);
 
   const H_PADDING = 24;
   const GAP = 12;
@@ -80,6 +106,15 @@ export default function MenuScreen({ navigation }) {
       <View style={styles.header}>
         <Text style={styles.title}>Menu</Text>
         <View style={styles.headerActions}>
+          <TouchableOpacity
+            style={styles.actionBtn}
+            activeOpacity={0.7}
+            onPress={() => navigation.navigate('AddProduct')}
+            accessibilityRole="button"
+            accessibilityLabel="Tambah produk"
+          >
+            <Ionicons name="add" size={26} color={theme.primary} />
+          </TouchableOpacity>
           <TouchableOpacity style={styles.actionBtn} activeOpacity={0.7}>
             <Ionicons name="search-outline" size={24} color={theme.primary} />
           </TouchableOpacity>
@@ -132,6 +167,13 @@ export default function MenuScreen({ navigation }) {
         keyExtractor={(item) => item.id}
         numColumns={2}
         ListHeaderComponent={renderHeader}
+        ListEmptyComponent={
+          loading ? (
+            <ActivityIndicator size="large" color={theme.primary} style={{ marginTop: 40 }} />
+          ) : (
+            <Text style={styles.emptyText}>Belum ada produk. Ketuk + untuk menambah.</Text>
+          )
+        }
         showsVerticalScrollIndicator={false}
         columnWrapperStyle={{
           paddingHorizontal: H_PADDING,
@@ -188,6 +230,7 @@ export default function MenuScreen({ navigation }) {
 const createStyles = (t) => StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: t.background },
   scrollContent: { paddingBottom: 120 },
+  emptyText: { textAlign: 'center', color: t.textMuted, marginTop: 40, paddingHorizontal: 24 },
 
   header: {
     flexDirection: 'row',

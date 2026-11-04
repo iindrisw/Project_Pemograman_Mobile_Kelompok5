@@ -15,6 +15,8 @@ import NewArrivalsScreen from './src/screens/NewArrivalsScreen';
 import MenuScreen from './src/screens/MenuScreen';
 import CartScreen from './src/screens/CartScreen';
 import ProductDetailScreen from './src/screens/ProductDetailScreen';
+import AddProductScreen from './src/screens/AddProductScreen';
+import EditProductScreen from './src/screens/EditProductScreen';
 import CheckoutSuccessScreen from './src/screens/CheckoutSuccessScreen';
 import ProfileScreen from './src/screens/ProfileScreen';
 import MyOrders from './src/screens/MyOrders';
@@ -54,6 +56,8 @@ function RootNavigator() {
           <Stack.Screen name="NewArrivals" component={NewArrivalsScreen} />
           <Stack.Screen name="Menu" component={MenuScreen} options={{ animation: 'fade' }} />
           <Stack.Screen name="ProductDetail" component={ProductDetailScreen} />
+          <Stack.Screen name="AddProduct" component={AddProductScreen} />
+          <Stack.Screen name="EditProduct" component={EditProductScreen} />
           <Stack.Screen name="Cart" component={CartScreen} />
           <Stack.Screen name="CheckoutSuccess" component={CheckoutSuccessScreen} options={{ animation: 'fade', gestureEnabled: false }} />
           <Stack.Screen name="Profile" component={ProfileScreen} options={{ animation: 'fade_from_bottom' }} />

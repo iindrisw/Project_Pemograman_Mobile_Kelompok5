@@ -1,5 +1,6 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
+  Alert,
   Image,
   ScrollView,
   StyleSheet,
@@ -8,10 +9,17 @@ import {
   View,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useFocusEffect } from '@react-navigation/native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../theme/ThemeContext';
 import { useCart } from '../context/CartContext';
-import { PRODUCTS, parsePrice } from '../data/products';
+import { supabase } from '../lib/supabase';
+import { ambilProduk, hapusFoto } from '../lib/produk';
+
+const parsePrice = (price) => {
+  const n = parseFloat(String(price).replace(/[^0-9.]/g, ''));
+  return Number.isFinite(n) ? n : 0;
+};
 
 export default function ProductDetailScreen({ navigation, route }) {
   const { theme } = useTheme();
@@ -19,25 +27,39 @@ export default function ProductDetailScreen({ navigation, route }) {
   const insets = useSafeAreaInsets();
   const { addToCart, cartItems } = useCart();
 
-  // Data dari Menu; dilengkapi dari data produk bersama (deskripsi, bahan, dll.)
-  const base = route?.params?.item;
-  const item = useMemo(() => {
-    const full = PRODUCTS.find((p) => p.id === base?.id) || {};
-    return { ...full, ...base };
-  }, [base]);
-
+  // Item awal dari Menu/Home; di-refresh dari Supabase tiap layar kembali fokus
+  // (mis. setelah Ubah Produk), supaya data yang tampil tidak basi.
+  const [item, setItem] = useState(route?.params?.item);
   const [qty, setQty] = useState(1);
   const [added, setAdded] = useState(false);
+  const [menghapus, setMenghapus] = useState(false);
 
-  const unitPrice = parsePrice(item.price);
-  const total = unitPrice * qty;
-  const cartCount = cartItems.reduce((sum, i) => sum + i.quantity, 0);
+  useFocusEffect(
+    useCallback(() => {
+      let aktif = true;
+      if (item?.id) {
+        ambilProduk(item.id)
+          .then((terbaru) => { if (aktif && terbaru) setItem(terbaru); })
+          .catch(() => {}); // gagal refresh: tetap pakai data yang ada
+      }
+      return () => { aktif = false; };
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [item?.id]),
+  );
 
   useEffect(() => {
     if (!added) return undefined;
     const timer = setTimeout(() => setAdded(false), 1600);
     return () => clearTimeout(timer);
   }, [added]);
+
+  if (!item) return null;
+
+  const stok = item.stok ?? 0;
+  const habis = stok <= 0;
+  const unitPrice = parsePrice(item.price);
+  const total = unitPrice * qty;
+  const cartCount = cartItems.reduce((sum, i) => sum + i.quantity, 0);
 
   const goBack = () => {
     if (navigation.canGoBack()) navigation.goBack();
@@ -49,10 +71,31 @@ export default function ProductDetailScreen({ navigation, route }) {
     setAdded(true);
   };
 
+  const hapusProduk = () => {
+    Alert.alert('Hapus produk', `Hapus ${item.name} permanen?`, [
+      { text: 'Batal', style: 'cancel' },
+      {
+        text: 'Hapus',
+        style: 'destructive',
+        onPress: async () => {
+          setMenghapus(true);
+          // Hapus baris dulu, lalu file fotonya, supaya tidak ada file yatim.
+          const { error } = await supabase.from('products').delete().eq('id', item.id);
+          if (error) {
+            setMenghapus(false);
+            Alert.alert('Gagal menghapus', error.message);
+            return;
+          }
+          await hapusFoto(item.image).catch(() => {});
+          navigation.goBack(); // Menu me-refetch otomatis saat kembali fokus
+        },
+      },
+    ]);
+  };
+
   const facts = [
-    item.weight && { icon: 'scale-outline', label: item.weight },
-    item.prepTime && { icon: 'time-outline', label: item.prepTime },
     item.category && { icon: 'pricetag-outline', label: item.category },
+    { icon: 'cube-outline', label: habis ? 'Stok habis' : `Stok: ${stok}` },
   ].filter(Boolean);
 
   return (
@@ -95,40 +138,52 @@ export default function ProductDetailScreen({ navigation, route }) {
           <Text style={styles.price}>{item.price}</Text>
         </View>
 
-        {facts.length > 0 && (
-          <View style={styles.factsRow}>
-            {facts.map((f) => (
-              <View key={f.label} style={styles.factChip}>
-                <Ionicons name={f.icon} size={14} color={theme.primary} />
-                <Text style={styles.factText}>{f.label}</Text>
-              </View>
-            ))}
-          </View>
-        )}
+        <View style={styles.factsRow}>
+          {facts.map((f) => (
+            <View key={f.label} style={styles.factChip}>
+              <Ionicons name={f.icon} size={14} color={theme.primary} />
+              <Text style={styles.factText}>{f.label}</Text>
+            </View>
+          ))}
+        </View>
 
         <Text style={styles.sectionTitle}>About this bake</Text>
         <Text style={styles.description}>
           {item.description || 'Freshly baked in our kitchen, made with simple, honest ingredients.'}
         </Text>
 
-        {item.ingredients?.length > 0 && (
-          <>
-            <Text style={styles.sectionTitle}>Ingredients</Text>
-            <View style={styles.ingredientsWrap}>
-              {item.ingredients.map((ing) => (
-                <View key={ing} style={styles.ingredientChip}>
-                  <Text style={styles.ingredientText}>{ing}</Text>
-                </View>
-              ))}
-            </View>
-          </>
-        )}
+        {/* Kelola produk (Update & Delete) */}
+        <Text style={styles.sectionTitle}>Kelola produk</Text>
+        <View style={styles.manageRow}>
+          <TouchableOpacity
+            style={styles.manageBtn}
+            onPress={() => navigation.navigate('EditProduct', { item })}
+            activeOpacity={0.85}
+            accessibilityRole="button"
+          >
+            <Ionicons name="create-outline" size={18} color={theme.text} />
+            <Text style={styles.manageText}>Ubah Produk</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.manageBtn, styles.deleteBtn]}
+            onPress={hapusProduk}
+            disabled={menghapus}
+            activeOpacity={0.85}
+            accessibilityRole="button"
+          >
+            <Ionicons name="trash-outline" size={18} color={theme.danger || '#D64545'} />
+            <Text style={[styles.manageText, { color: theme.danger || '#D64545' }]}>
+              {menghapus ? 'Menghapus…' : 'Hapus Produk'}
+            </Text>
+          </TouchableOpacity>
+        </View>
       </ScrollView>
 
       <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 16) }]}>
-        <View style={styles.qtyContainer}>
+        <View style={[styles.qtyContainer, habis && styles.dim]}>
           <TouchableOpacity
             style={styles.qtyBtn}
+            disabled={habis}
             onPress={() => setQty((q) => Math.max(1, q - 1))}
             accessibilityLabel="Decrease quantity"
           >
@@ -137,7 +192,8 @@ export default function ProductDetailScreen({ navigation, route }) {
           <Text style={styles.qtyText}>{qty}</Text>
           <TouchableOpacity
             style={styles.qtyBtn}
-            onPress={() => setQty((q) => Math.min(20, q + 1))}
+            disabled={habis}
+            onPress={() => setQty((q) => Math.min(Math.max(stok, 1), q + 1))}
             accessibilityLabel="Increase quantity"
           >
             <Ionicons name="add" size={18} color={theme.primary} />
@@ -145,14 +201,15 @@ export default function ProductDetailScreen({ navigation, route }) {
         </View>
 
         <TouchableOpacity
-          style={[styles.addButton, added && styles.addButtonDone]}
+          style={[styles.addButton, (added || habis) && styles.dim]}
           onPress={handleAdd}
+          disabled={habis}
           activeOpacity={0.85}
           accessibilityRole="button"
         >
           <Ionicons name={added ? 'checkmark' : 'bag-add-outline'} size={20} color={theme.onPrimary} />
           <Text style={styles.addButtonText}>
-            {added ? 'Added to cart' : `Add to cart · $${total.toFixed(2)}`}
+            {habis ? 'Stok habis' : added ? 'Added to cart' : `Add to cart · $${total.toFixed(2)}`}
           </Text>
         </TouchableOpacity>
       </View>
@@ -227,14 +284,21 @@ const createStyles = (t) =>
     sectionTitle: { color: t.text, fontSize: 17, fontWeight: '700', marginTop: 26, marginBottom: 8 },
     description: { color: t.textMuted, fontSize: 15, lineHeight: 23 },
 
-    ingredientsWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-    ingredientChip: {
-      paddingHorizontal: 12,
-      paddingVertical: 7,
-      borderRadius: 12,
-      backgroundColor: t.badgeBg,
+    manageRow: { flexDirection: 'row', gap: 12 },
+    manageBtn: {
+      flex: 1,
+      height: 48,
+      borderRadius: 14,
+      borderWidth: 1,
+      borderColor: t.border,
+      backgroundColor: t.surface,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 8,
     },
-    ingredientText: { color: t.primary, fontSize: 12, fontWeight: '600' },
+    deleteBtn: { borderColor: t.danger || '#D64545' },
+    manageText: { color: t.text, fontSize: 14, fontWeight: '600' },
 
     footer: {
       position: 'absolute',
@@ -272,6 +336,6 @@ const createStyles = (t) =>
       justifyContent: 'center',
       gap: 8,
     },
-    addButtonDone: { opacity: 0.85 },
+    dim: { opacity: 0.5 },
     addButtonText: { color: t.onPrimary, fontSize: 15, fontWeight: '700' },
   });
