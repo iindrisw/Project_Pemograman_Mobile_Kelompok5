@@ -1,162 +1,143 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import {
-  Animated,
-  Platform,
+  ActivityIndicator,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from 'react-native';
-import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { useFocusEffect } from '@react-navigation/native';
+import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../theme/ThemeContext';
 import FadeInView from '../components/FadeInView';
 import ScreenHeader from '../components/ScreenHeader';
+import { ambilMetodeBayar, hapusMetodeBayar, jadikanDefaultMetode } from '../lib/pembayaran';
+import { confirmDialog, notify } from '../lib/notify';
 
-const wallets = [
-  { id: 'apple', letter: 'A', title: 'Apple Pay', subtitle: 'Pay with Face ID' },
-  { id: 'google', letter: 'G', title: 'Google Pay', subtitle: 'Fast, secure checkout' },
-  { id: 'paypal', letter: 'P', title: 'PayPal', subtitle: 'Link your PayPal account' },
-];
-
-const serifFont = Platform.select({ ios: 'Georgia', android: 'serif', default: 'serif' });
-
-/* Radio dengan titik yang "membal" saat dipilih */
-function Radio({ selected }) {
-  const { theme } = useTheme();
-  const scale = useRef(new Animated.Value(selected ? 1 : 0)).current;
-
-  useEffect(() => {
-    Animated.spring(scale, {
-      toValue: selected ? 1 : 0,
-      friction: 5,
-      tension: 140,
-      useNativeDriver: true,
-    }).start();
-  }, [selected, scale]);
-
-  return (
-    <View
-      style={{
-        width: 24,
-        height: 24,
-        borderRadius: 12,
-        borderWidth: 1.5,
-        borderColor: selected ? theme.primary : theme.border,
-        alignItems: 'center',
-        justifyContent: 'center',
-      }}
-    >
-      <Animated.View
-        style={{
-          width: 12,
-          height: 12,
-          borderRadius: 6,
-          backgroundColor: theme.primary,
-          transform: [{ scale }],
-        }}
-      />
-    </View>
-  );
-}
+const pad = (n) => String(n).padStart(2, '0');
 
 export default function Payments({ navigation }) {
   const { theme } = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const insets = useSafeAreaInsets();
-  const [selected, setSelected] = useState('card');
+
+  const [items, setItems] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  const muat = useCallback(async () => {
+    try {
+      setItems(await ambilMetodeBayar());
+    } catch (e) {
+      notify('Gagal memuat metode pembayaran', e.message);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  // Muat ulang tiap kali halaman ini kembali fokus (mis. setelah AddPayment)
+  useFocusEffect(
+    useCallback(() => {
+      muat();
+    }, [muat]),
+  );
+
+  const onDefault = async (id) => {
+    try {
+      await jadikanDefaultMetode(id);
+      await muat();
+    } catch (e) {
+      notify('Gagal mengubah kartu utama', e.message);
+    }
+  };
+
+  const onDelete = async (item) => {
+    const ok = await confirmDialog('Hapus kartu?', `${item.brand} •••• ${item.last4}`);
+    if (!ok) return;
+    try {
+      await hapusMetodeBayar(item.id);
+      await muat();
+    } catch (e) {
+      notify('Gagal menghapus kartu', e.message);
+    }
+  };
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
-      <FadeInView distance={0} duration={300} style={{ flex: 1 }}>
-        <ScreenHeader title="Payments" navigation={navigation} />
+      <ScreenHeader title="Payment Methods" navigation={navigation} />
 
-        <ScrollView
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-        >
-          {/* Kartu tersimpan */}
-          <FadeInView delay={80}>
-            <View style={styles.sectionRow}>
-              <Text style={styles.eyebrow}>YOUR SAVED CARD</Text>
-              {selected === 'card' && <Text style={styles.selectedText}>Selected</Text>}
-            </View>
+      {loading ? (
+        <ActivityIndicator size="large" color={theme.primary} style={{ marginTop: 40 }} />
+      ) : (
+        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+          <FadeInView>
+            {items.length === 0 && (
+              <Text style={styles.empty}>Belum ada kartu tersimpan. Tambahkan kartu pertamamu.</Text>
+            )}
 
-            <TouchableOpacity
-              activeOpacity={0.9}
-              onPress={() => setSelected('card')}
-              accessibilityRole="button"
-              accessibilityLabel="Visa card ending in 4829"
-              style={styles.card}
-            >
-              <View style={styles.cardCircleLarge} />
-              <View style={styles.cardCircleSmall} />
+            {items.map((p) => (
+              <View key={p.id} style={[styles.card, p.isDefault && styles.cardDefault]}>
+                <View style={styles.cardTop}>
+                  <View style={styles.brandRow}>
+                    <Ionicons name="card-outline" size={20} color={theme.primary} />
+                    <Text style={styles.brand}>{p.brand}</Text>
+                  </View>
+                  {p.isDefault && (
+                    <View style={styles.badge}>
+                      <Text style={styles.badgeText}>Default</Text>
+                    </View>
+                  )}
+                </View>
 
-              <View style={styles.cardTop}>
-                <Text style={styles.cardTagline}>Everyday, well spent.</Text>
-                <MaterialCommunityIcons name="contactless-payment" size={26} color="#F5EBDD" />
+                <Text style={styles.number}>•••• •••• •••• {p.last4}</Text>
+                <View style={styles.metaRow}>
+                  <Text style={styles.meta}>{p.holder}</Text>
+                  <Text style={styles.meta}>Exp {pad(p.expMonth)}/{String(p.expYear).slice(-2)}</Text>
+                </View>
+
+                <View style={styles.actions}>
+                  <TouchableOpacity
+                    onPress={() => navigation.navigate('AddPayment', { item: p })}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Edit kartu ${p.brand} berakhiran ${p.last4}`}
+                    style={styles.editBtn}
+                  >
+                    <Ionicons name="create-outline" size={16} color={theme.primary} />
+                    <Text style={styles.actionText}>Edit</Text>
+                  </TouchableOpacity>
+                  {!p.isDefault && (
+                    <TouchableOpacity onPress={() => onDefault(p.id)} accessibilityRole="button">
+                      <Text style={styles.actionText}>Set as default</Text>
+                    </TouchableOpacity>
+                  )}
+                  <TouchableOpacity
+                    onPress={() => onDelete(p)}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Hapus kartu ${p.brand} berakhiran ${p.last4}`}
+                    style={styles.deleteBtn}
+                  >
+                    <Ionicons name="trash-outline" size={16} color={theme.danger || '#D64545'} />
+                    <Text style={[styles.actionText, { color: theme.danger || '#D64545' }]}>Delete</Text>
+                  </TouchableOpacity>
+                </View>
               </View>
-
-              <Text style={styles.cardNumber}>
-                {'•••• •••• •••• '}
-                <Text style={styles.cardNumberLast}>4829</Text>
-              </Text>
-
-              <View style={styles.cardBottom}>
-                <View>
-                  <Text style={styles.cardName}>SOPHIE MILLER</Text>
-                  <Text style={styles.cardValid}>VALID THRU  08/28</Text>
-                </View>
-                <Text style={styles.cardBrand}>VISA</Text>
-              </View>
-            </TouchableOpacity>
-          </FadeInView>
-
-          {/* E-wallets */}
-          <FadeInView delay={180}>
-            <Text style={styles.sectionTitle}>E-wallets</Text>
-          </FadeInView>
-
-          {wallets.map((w, i) => (
-            <FadeInView key={w.id} delay={240 + i * 80}>
-              <TouchableOpacity
-                style={[styles.walletRow, selected === w.id && styles.walletRowActive]}
-                activeOpacity={0.85}
-                onPress={() => setSelected(w.id)}
-                accessibilityRole="radio"
-                accessibilityState={{ selected: selected === w.id }}
-              >
-                <View style={styles.walletLetterBox}>
-                  <Text style={styles.walletLetter}>{w.letter}</Text>
-                </View>
-                <View style={styles.walletInfo}>
-                  <Text style={styles.walletTitle}>{w.title}</Text>
-                  <Text style={styles.walletSubtitle}>{w.subtitle}</Text>
-                </View>
-                <Radio selected={selected === w.id} />
-              </TouchableOpacity>
-            </FadeInView>
-          ))}
-
-          <FadeInView delay={520} style={styles.secureRow}>
-            <Ionicons name="lock-closed-outline" size={16} color={theme.textMuted} />
-            <Text style={styles.secureText}>Encrypted & secure. Always.</Text>
+            ))}
           </FadeInView>
         </ScrollView>
+      )}
 
-        <FadeInView delay={600} style={{ paddingBottom: Math.max(insets.bottom, 12) }}>
-          <TouchableOpacity
-            style={styles.addButton}
-            activeOpacity={0.85}
-            accessibilityRole="button"
-            onPress={() => navigation.navigate('AddPayment')}
-          >
-            <Ionicons name="add" size={22} color={theme.onPrimary} />
-            <Text style={styles.addButtonText}>Add New Payment</Text>
-          </TouchableOpacity>
-        </FadeInView>
-      </FadeInView>
+      <View style={{ paddingBottom: Math.max(insets.bottom, 12) }}>
+        <TouchableOpacity
+          style={styles.addButton}
+          activeOpacity={0.85}
+          onPress={() => navigation.navigate('AddPayment')}
+          accessibilityRole="button"
+        >
+          <Ionicons name="add" size={20} color={theme.onPrimary} />
+          <Text style={styles.addText}>Add New Payment</Text>
+        </TouchableOpacity>
+      </View>
     </SafeAreaView>
   );
 }
@@ -165,89 +146,28 @@ const createStyles = (t) =>
   StyleSheet.create({
     safeArea: { flex: 1, backgroundColor: t.background },
     scrollContent: { paddingHorizontal: 20, paddingBottom: 16 },
-
-    sectionRow: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      marginBottom: 12,
-    },
-    eyebrow: { color: t.textMuted, fontSize: 11, fontWeight: '700', letterSpacing: 1.4 },
-    selectedText: { color: t.primary, fontSize: 12, fontWeight: '600' },
-
-    /* Kartu: warna coklat tetap di kedua mode (seperti kartu fisik) */
+    empty: { color: t.textMuted, textAlign: 'center', marginTop: 40, fontSize: 14 },
     card: {
-      backgroundColor: '#5B3A29',
-      borderRadius: 24,
-      padding: 22,
-      height: 204,
-      overflow: 'hidden',
-      justifyContent: 'space-between',
-    },
-    cardCircleLarge: {
-      position: 'absolute',
-      right: -70,
-      top: -60,
-      width: 260,
-      height: 260,
-      borderRadius: 130,
-      borderWidth: 1,
-      borderColor: 'rgba(255,255,255,0.10)',
-    },
-    cardCircleSmall: {
-      position: 'absolute',
-      right: -20,
-      top: -20,
-      width: 170,
-      height: 170,
-      borderRadius: 85,
-      borderWidth: 1,
-      borderColor: 'rgba(255,255,255,0.10)',
-    },
-    cardTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
-    cardTagline: { color: '#F5EBDD', fontSize: 21, fontFamily: serifFont },
-    cardNumber: { color: '#F5EBDD', fontSize: 22, letterSpacing: 2 },
-    cardNumberLast: { letterSpacing: 1.5 },
-    cardBottom: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end' },
-    cardName: { color: '#F5EBDD', fontSize: 12, letterSpacing: 0.6 },
-    cardValid: { color: 'rgba(245,235,221,0.65)', fontSize: 11, marginTop: 4 },
-    cardBrand: { color: '#FFFFFF', fontSize: 26, fontWeight: '900', fontStyle: 'italic' },
-
-    sectionTitle: { color: t.text, fontSize: 20, marginTop: 28, marginBottom: 14 },
-
-    walletRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      padding: 14,
-      marginBottom: 12,
-      borderRadius: 18,
+      backgroundColor: t.surface,
+      borderRadius: 16,
       borderWidth: 1,
       borderColor: t.border,
-      backgroundColor: t.surface,
+      padding: 16,
+      marginBottom: 14,
     },
-    walletRowActive: { borderColor: t.primary },
-    walletLetterBox: {
-      width: 40,
-      height: 40,
-      borderRadius: 10,
-      backgroundColor: t.card,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    walletLetter: { color: t.text, fontSize: 20, fontWeight: '700' },
-    walletInfo: { flex: 1, marginLeft: 14 },
-    walletTitle: { color: t.text, fontSize: 15, fontWeight: '700' },
-    walletSubtitle: { color: t.textMuted, fontSize: 12, marginTop: 3 },
-
-    secureRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'center',
-      gap: 8,
-      marginTop: 12,
-    },
-    secureText: { color: t.textMuted, fontSize: 12 },
-
+    cardDefault: { borderColor: t.primary },
+    cardTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
+    brandRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+    brand: { color: t.text, fontSize: 15, fontWeight: '700' },
+    badge: { backgroundColor: t.badgeBg, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4 },
+    badgeText: { color: t.primary, fontSize: 11, fontWeight: '700' },
+    number: { color: t.text, fontSize: 17, fontWeight: '600', letterSpacing: 1.5, marginBottom: 10 },
+    metaRow: { flexDirection: 'row', justifyContent: 'space-between' },
+    meta: { color: t.textMuted, fontSize: 13 },
+    actions: { flexDirection: 'row', alignItems: 'center', gap: 16, marginTop: 14 },
+    editBtn: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+    actionText: { color: t.primary, fontSize: 13, fontWeight: '600' },
+    deleteBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, marginLeft: 'auto' },
     addButton: {
       height: 54,
       marginHorizontal: 20,
@@ -256,7 +176,7 @@ const createStyles = (t) =>
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'center',
-      gap: 8,
+      gap: 6,
     },
-    addButtonText: { color: t.onPrimary, fontSize: 15, fontWeight: '700' },
+    addText: { color: t.onPrimary, fontSize: 15, fontWeight: '700' },
   });

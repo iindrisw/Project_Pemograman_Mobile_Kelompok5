@@ -1,6 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  Alert,
   Image,
   ScrollView,
   StyleSheet,
@@ -13,8 +12,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../theme/ThemeContext';
 import { useCart } from '../context/CartContext';
-import { supabase } from '../lib/supabase';
-import { ambilProduk, hapusFoto } from '../lib/produk';
+import { ambilProduk } from '../lib/produk';
 
 const parsePrice = (price) => {
   const n = parseFloat(String(price).replace(/[^0-9.]/g, ''));
@@ -27,12 +25,9 @@ export default function ProductDetailScreen({ navigation, route }) {
   const insets = useSafeAreaInsets();
   const { addToCart, cartItems } = useCart();
 
-  // Item awal dari Menu/Home; di-refresh dari Supabase tiap layar kembali fokus
-  // (mis. setelah Ubah Produk), supaya data yang tampil tidak basi.
   const [item, setItem] = useState(route?.params?.item);
   const [qty, setQty] = useState(1);
   const [added, setAdded] = useState(false);
-  const [menghapus, setMenghapus] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -40,10 +35,9 @@ export default function ProductDetailScreen({ navigation, route }) {
       if (item?.id) {
         ambilProduk(item.id)
           .then((terbaru) => { if (aktif && terbaru) setItem(terbaru); })
-          .catch(() => {}); // gagal refresh: tetap pakai data yang ada
+          .catch(() => {});
       }
       return () => { aktif = false; };
-      // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [item?.id]),
   );
 
@@ -71,26 +65,9 @@ export default function ProductDetailScreen({ navigation, route }) {
     setAdded(true);
   };
 
+  // Navigasi ke HapusProductScreen
   const hapusProduk = () => {
-    Alert.alert('Hapus produk', `Hapus ${item.name} permanen?`, [
-      { text: 'Batal', style: 'cancel' },
-      {
-        text: 'Hapus',
-        style: 'destructive',
-        onPress: async () => {
-          setMenghapus(true);
-          // Hapus baris dulu, lalu file fotonya, supaya tidak ada file yatim.
-          const { error } = await supabase.from('products').delete().eq('id', item.id);
-          if (error) {
-            setMenghapus(false);
-            Alert.alert('Gagal menghapus', error.message);
-            return;
-          }
-          await hapusFoto(item.image).catch(() => {});
-          navigation.goBack(); // Menu me-refetch otomatis saat kembali fokus
-        },
-      },
-    ]);
+    navigation.navigate('HapusProduct', { item });
   };
 
   const facts = [
@@ -152,7 +129,6 @@ export default function ProductDetailScreen({ navigation, route }) {
           {item.description || 'Freshly baked in our kitchen, made with simple, honest ingredients.'}
         </Text>
 
-        {/* Kelola produk (Update & Delete) */}
         <Text style={styles.sectionTitle}>Kelola produk</Text>
         <View style={styles.manageRow}>
           <TouchableOpacity
@@ -167,13 +143,12 @@ export default function ProductDetailScreen({ navigation, route }) {
           <TouchableOpacity
             style={[styles.manageBtn, styles.deleteBtn]}
             onPress={hapusProduk}
-            disabled={menghapus}
             activeOpacity={0.85}
             accessibilityRole="button"
           >
             <Ionicons name="trash-outline" size={18} color={theme.danger || '#D64545'} />
             <Text style={[styles.manageText, { color: theme.danger || '#D64545' }]}>
-              {menghapus ? 'Menghapus…' : 'Hapus Produk'}
+              Hapus Produk
             </Text>
           </TouchableOpacity>
         </View>

@@ -1,20 +1,22 @@
-import React, { useMemo } from 'react';
-import { Alert, StyleSheet } from 'react-native';
+import React, { useMemo, useState } from 'react';
+import { View, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../theme/ThemeContext';
 import ScreenHeader from '../components/ScreenHeader';
 import ProductForm from '../components/ProductForm';
+import ProductResultModal from '../components/ProductResultModal'; // 👈 Import komponen baru
 import { supabase } from '../lib/supabase';
 import { uploadFoto, hapusFoto } from '../lib/produk';
 
 export default function AddProductScreen({ navigation }) {
   const { theme } = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
+  const [formKey, setFormKey] = useState(0);
+  const [hasil, setHasil] = useState(null);
 
   const simpan = async (v) => {
     let fotoUrl = null;
     try {
-      // Urutan: upload foto DULU, baru insert baris (foto_url sudah ada).
       fotoUrl = await uploadFoto(v.fotoUri);
       const { error } = await supabase.from('products').insert({
         nama: v.nama,
@@ -25,22 +27,45 @@ export default function AddProductScreen({ navigation }) {
         foto_url: fotoUrl,
       });
       if (error) throw error;
-      Alert.alert('Berhasil', 'Produk ditambahkan.', [
-        { text: 'OK', onPress: () => navigation.goBack() },
-      ]);
+      setHasil({ tipe: 'sukses' });
     } catch (e) {
-      // Insert gagal setelah upload berhasil: hapus foto supaya tidak jadi file yatim.
       if (fotoUrl) await hapusFoto(fotoUrl).catch(() => {});
-      Alert.alert('Gagal menyimpan', e.message);
+      setHasil({ tipe: 'gagal', pesan: e?.message || 'Terjadi kesalahan.' });
     }
   };
 
+  const tambahLagi = () => {
+    setFormKey((k) => k + 1);
+    setHasil(null);
+  };
+
+  const tutupError = () => setHasil(null);
+
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top']}>
-      <ScreenHeader title="Tambah Produk" navigation={navigation} />
-      <ProductForm fotoWajib submitLabel="Simpan Produk" onSubmit={simpan} />
-    </SafeAreaView>
+    <View style={styles.root}>
+      <SafeAreaView style={styles.safeArea} edges={['top']}>
+        <ScreenHeader title="Tambah Produk" navigation={navigation} />
+        <ProductForm
+          key={formKey}
+          fotoWajib
+          submitLabel="Simpan Produk"
+          onSubmit={simpan}
+        />
+      </SafeAreaView>
+
+      {/* Panggil komponen modal hasil di sini */}
+      <ProductResultModal
+        hasil={hasil}
+        onTambahLagi={tambahLagi}
+        onKembali={() => navigation.goBack()}
+        onCobaLagi={tutupError}
+        t={theme}
+      />
+    </View>
   );
 }
 
-const createStyles = (t) => StyleSheet.create({ safeArea: { flex: 1, backgroundColor: t.background } });
+const createStyles = (t) => StyleSheet.create({
+  root: { flex: 1, backgroundColor: t.background },
+  safeArea: { flex: 1, backgroundColor: t.background },
+});

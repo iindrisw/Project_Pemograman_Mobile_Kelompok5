@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   Image,
   ScrollView,
@@ -12,6 +12,7 @@ import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../theme/ThemeContext';
 import FadeInView from '../components/FadeInView';
+import { supabase } from '../lib/supabase';
 
 // Nama route tiap menu (harus sama dengan name di Stack.Screen pada App.js)
 const routeByLabel = {
@@ -34,122 +35,139 @@ export default function ProfileScreen({ navigation }) {
   const { theme } = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const insets = useSafeAreaInsets();
+  const [username, setUsername] = useState('');
+
+  // Ambil username dari akun Supabase yang sedang login
+  useEffect(() => {
+    let aktif = true;
+    supabase.auth.getUser().then(({ data }) => {
+      if (aktif) setUsername(data?.user?.user_metadata?.username || '');
+    });
+    return () => { aktif = false; };
+  }, []);
 
   const goToHome = () => navigation.navigate('Home');
-  const logOut = () => {
-    navigation.dispatch(
-      CommonActions.reset({
-        index: 0,
-        routes: [{ name: 'Login' }],
-      }),
-    );
+  const goToMenu = () => navigation.navigate('UserMenu');
+
+  const logOut = async () => {
+    try {
+      await supabase.auth.signOut();
+    } finally {
+      navigation.dispatch(
+        CommonActions.reset({
+          index: 0,
+          routes: [{ name: 'Login' }],
+        }),
+      );
+    }
   };
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
-<FadeInView distance={12} duration={350} style={{ flex: 1 }}>
-      <ScrollView
-        contentContainerStyle={[
-          styles.scrollContent,
-          { paddingBottom: 100 + insets.bottom },
-        ]}
-        showsVerticalScrollIndicator={false}
-      >
-        <View style={styles.profileHeader}>
-          <Image
-            source={{
-              uri: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=240&h=240&fit=crop&crop=faces',
-            }}
-            style={styles.avatar}
-            accessibilityLabel="Profile photo"
-          />
-          <Text style={styles.name}>edward</Text>
-        </View>
-
-        <View style={styles.optionsCard}>
-          {profileOptions.map((option, index) => {
-            const rowStyle = [
-              styles.optionRow,
-              index === profileOptions.length - 1 && styles.lastOptionRow,
-            ];
-            const rowContent = (
-              <>
-                <Ionicons name={option.icon} size={18} color={theme.textMuted} />
-                <Text style={styles.optionLabel}>{option.label}</Text>
-                <Ionicons name="chevron-forward" size={16} color={theme.textMuted} />
-              </>
-            );
-
-            if (routeByLabel[option.label]) {
-              return (
-                <TouchableOpacity
-                  key={option.label}
-                  style={rowStyle}
-                  onPress={() => navigation.navigate(routeByLabel[option.label])}
-                  activeOpacity={0.7}
-                  accessibilityRole="button"
-                >
-                  {rowContent}
-                </TouchableOpacity>
-              );
-            }
-
-            return (
-              <View key={option.label} style={rowStyle}>
-                {rowContent}
-              </View>
-            );
-          })}
-        </View>
-
-        <TouchableOpacity
-          style={styles.logoutButton}
-          onPress={logOut}
-          activeOpacity={0.8}
-          accessibilityRole="button"
-          accessibilityLabel="Log out"
+      <FadeInView distance={12} duration={350} style={{ flex: 1 }}>
+        <ScrollView
+          contentContainerStyle={[
+            styles.scrollContent,
+            { paddingBottom: 100 + insets.bottom },
+          ]}
+          showsVerticalScrollIndicator={false}
         >
-          <MaterialCommunityIcons name="logout" size={17} color={theme.primary} />
-          <Text style={styles.logoutText}>Log Out</Text>
-        </TouchableOpacity>
-      </ScrollView>
-
-      <View
-        style={[
-          styles.bottomNav,
-          { height: 70 + insets.bottom, paddingBottom: insets.bottom + 8 },
-        ]}
-      >
-        <TouchableOpacity
-          style={styles.navItem}
-          activeOpacity={0.8}
-          accessibilityRole="button"
-          accessibilityLabel="Menu"
-        >
-          <Ionicons name="bag-outline" size={24} color={theme.navInactive} />
-          <Text style={styles.navLabel}>Menu</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.navItem}
-          onPress={goToHome}
-          activeOpacity={0.8}
-          accessibilityRole="button"
-          accessibilityLabel="Back to Home"
-        >
-          <Ionicons name="home-outline" size={24} color={theme.navInactive} />
-          <Text style={styles.navLabel}>Home</Text>
-        </TouchableOpacity>
-
-        <View style={styles.navItem}>
-          <View style={styles.activeProfileIcon}>
-            <Ionicons name="person-outline" size={19} color={theme.onPrimary} />
+          <View style={styles.profileHeader}>
+            <Image
+              source={{
+                uri: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=240&h=240&fit=crop&crop=faces',
+              }}
+              style={styles.avatar}
+              accessibilityLabel="Profile photo"
+            />
+            <Text style={styles.name}>{username || 'Guest'}</Text>
           </View>
-          <Text style={styles.activeNavLabel}>Profile</Text>
+
+          <View style={styles.optionsCard}>
+            {profileOptions.map((option, index) => {
+              const rowStyle = [
+                styles.optionRow,
+                index === profileOptions.length - 1 && styles.lastOptionRow,
+              ];
+              const rowContent = (
+                <>
+                  <Ionicons name={option.icon} size={18} color={theme.textMuted} />
+                  <Text style={styles.optionLabel}>{option.label}</Text>
+                  <Ionicons name="chevron-forward" size={16} color={theme.textMuted} />
+                </>
+              );
+
+              if (routeByLabel[option.label]) {
+                return (
+                  <TouchableOpacity
+                    key={option.label}
+                    style={rowStyle}
+                    onPress={() => navigation.navigate(routeByLabel[option.label])}
+                    activeOpacity={0.7}
+                    accessibilityRole="button"
+                  >
+                    {rowContent}
+                  </TouchableOpacity>
+                );
+              }
+
+              return (
+                <View key={option.label} style={rowStyle}>
+                  {rowContent}
+                </View>
+              );
+            })}
+          </View>
+
+          <TouchableOpacity
+            style={styles.logoutButton}
+            onPress={logOut}
+            activeOpacity={0.8}
+            accessibilityRole="button"
+            accessibilityLabel="Log out"
+          >
+            <MaterialCommunityIcons name="logout" size={17} color={theme.primary} />
+            <Text style={styles.logoutText}>Log Out</Text>
+          </TouchableOpacity>
+        </ScrollView>
+
+        <View
+          style={[
+            styles.bottomNav,
+            { height: 70 + insets.bottom, paddingBottom: insets.bottom + 8 },
+          ]}
+        >
+          <TouchableOpacity
+            style={styles.navItem}
+            onPress={goToMenu}
+            activeOpacity={0.8}
+            accessibilityRole="button"
+            accessibilityLabel="Menu"
+          >
+            <Ionicons name="bag-outline" size={24} color={theme.navInactive} />
+            <Text style={styles.navLabel}>Menu</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.navItem}
+            onPress={goToHome}
+            activeOpacity={0.8}
+            accessibilityRole="button"
+            accessibilityLabel="Back to Home"
+          >
+            <Ionicons name="home-outline" size={24} color={theme.navInactive} />
+            <Text style={styles.navLabel}>Home</Text>
+          </TouchableOpacity>
+
+          <View style={styles.navItem}>
+            <View style={styles.activeProfileIcon}>
+              <Ionicons name="person-outline" size={19} color={theme.onPrimary} />
+            </View>
+            <Text style={styles.activeNavLabel}>Profile</Text>
+          </View>
         </View>
-      </View>
-    </FadeInView>
-</SafeAreaView>
+      </FadeInView>
+    </SafeAreaView>
   );
 }
 

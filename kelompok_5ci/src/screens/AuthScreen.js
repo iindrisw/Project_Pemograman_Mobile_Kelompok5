@@ -1,5 +1,7 @@
 import React, { useState, useMemo, useRef } from 'react';
 import {
+  ActivityIndicator,
+  Alert,
   Image,
   KeyboardAvoidingView,
   Platform,
@@ -14,18 +16,46 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { CommonActions } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../theme/ThemeContext';
+import { supabase } from '../lib/supabase';
 
 const breadImage = require('../../assets/splash_screen/logo_spl_s.png');
 
+// Alert.alert tidak selalu tampil di web, jadi pakai window.alert di web.
+const notify = (title, message) => {
+  if (Platform.OS === 'web') {
+    window.alert(`${title}\n\n${message}`);
+  } else {
+    Alert.alert(title, message);
+  }
+};
+
+// Supabase Auth butuh email, sedangkan form memakai username.
+const usernameToEmail = (username) => `${username.trim().toLowerCase()}@dapurchikara.app`;
+
+// Terjemahkan pesan error Supabase yang umum supaya lebih jelas.
+const friendlyError = (message = '', isLogin) => {
+  const m = message.toLowerCase();
+  if (m.includes('invalid login credentials')) return 'Username atau password salah.';
+  if (m.includes('already registered') || m.includes('already been registered')) {
+    return 'Username sudah dipakai. Coba username lain.';
+  }
+  if (m.includes('email not confirmed')) {
+    return 'Akun belum terkonfirmasi. Matikan "Confirm email" di dashboard Supabase.';
+  }
+  if (m.includes('network') || m.includes('failed to fetch')) {
+    return 'Tidak bisa terhubung ke server. Cek koneksi internet kamu.';
+  }
+  return message || (isLogin ? 'Login gagal.' : 'Pendaftaran gagal.');
+};
+
 /* ------------------------------- Validasi form ------------------------------- */
-// Validasi sederhana di sisi FE saja (belum terhubung backend).
 const validate = (values, isLogin) => {
   const errors = {};
   const username = values.username.trim();
 
   if (!username) errors.username = 'Enter your username.';
   else if (username.length < 3) errors.username = 'Username must be at least 3 characters.';
-  else if (!isLogin && !/^[A-Za-z0-9_.]+$/.test(username)) {
+  else if (!/^[A-Za-z0-9_.]+$/.test(username)) {
     errors.username = 'Use letters, numbers, dots or underscores only.';
   }
 
@@ -94,6 +124,7 @@ export default function AuthScreen({ navigation, mode }) {
   const [values, setValues] = useState({ username: '', password: '', confirm: '' });
   const [touched, setTouched] = useState({});
   const [submitted, setSubmitted] = useState(false);
+  const [loading, setLoading] = useState(false);
   const passwordRef = useRef(null);
   const confirmRef = useRef(null);
 
@@ -104,13 +135,48 @@ export default function AuthScreen({ navigation, mode }) {
   const setField = (field) => (text) => setValues((v) => ({ ...v, [field]: text }));
   const markTouched = (field) => () => setTouched((t) => ({ ...t, [field]: true }));
 
-  const handleSubmit = () => {
-    setSubmitted(true);
-    if (Object.keys(errors).length > 0) return;
-
-    // TODO: panggil API login/register saat backend sudah ada.
+  const goHome = () =>
     // reset supaya tombol back tidak kembali ke halaman login/register
     navigation.dispatch(CommonActions.reset({ index: 0, routes: [{ name: 'Home' }] }));
+
+  const handleSubmit = async () => {
+    setSubmitted(true);
+    if (Object.keys(errors).length > 0 || loading) return;
+
+    const username = values.username.trim().toLowerCase();
+    const email = usernameToEmail(username);
+
+    setLoading(true);
+    try {
+      if (isLogin) {
+        const { error } = await supabase.auth.signInWithPassword({
+          email,
+          password: values.password,
+        });
+        if (error) throw error;
+      } else {
+        const { data, error } = await supabase.auth.signUp({
+          email,
+          password: values.password,
+          options: { data: { username } }, // tersimpan di user_metadata
+        });
+        if (error) throw error;
+
+        // session null = Supabase masih meminta konfirmasi email
+        if (!data.session) {
+          notify(
+            'Konfirmasi dibutuhkan',
+            'Akun dibuat, tetapi belum bisa dipakai. Matikan "Confirm email" di Supabase: Authentication > Sign In / Providers > Email.',
+          );
+          return;
+        }
+      }
+      goHome();
+    } catch (e) {
+      notify(isLogin ? 'Login gagal' : 'Daftar gagal', friendlyError(e.message, isLogin));
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -208,6 +274,7 @@ export default function AuthScreen({ navigation, mode }) {
                 returnKeyType="next"
                 onSubmitEditing={() => passwordRef.current?.focus()}
                 blurOnSubmit={false}
+                editable={!loading}
               />
 
               <AuthInput
@@ -227,6 +294,7 @@ export default function AuthScreen({ navigation, mode }) {
                 returnKeyType={isLogin ? 'done' : 'next'}
                 onSubmitEditing={isLogin ? handleSubmit : () => confirmRef.current?.focus()}
                 blurOnSubmit={isLogin}
+                editable={!loading}
               />
 
               {!isLogin && (
@@ -246,6 +314,7 @@ export default function AuthScreen({ navigation, mode }) {
                   textContentType="newPassword"
                   returnKeyType="done"
                   onSubmitEditing={handleSubmit}
+                  editable={!loading}
                 />
               )}
 
@@ -254,14 +323,24 @@ export default function AuthScreen({ navigation, mode }) {
               )}
 
               <TouchableOpacity
-                style={[styles.submitButton, !isLogin && styles.registerButton]}
+                style={[
+                  styles.submitButton,
+                  !isLogin && styles.registerButton,
+                  loading && styles.submitButtonDisabled,
+                ]}
                 onPress={handleSubmit}
+                disabled={loading}
                 activeOpacity={0.85}
                 accessibilityRole="button"
+                accessibilityState={{ disabled: loading, busy: loading }}
               >
-                <Text style={styles.submitButtonText}>
-                  {isLogin ? 'Login' : 'Register'}
-                </Text>
+                {loading ? (
+                  <ActivityIndicator color={colors.onPrimary} />
+                ) : (
+                  <Text style={styles.submitButtonText}>
+                    {isLogin ? 'Login' : 'Register'}
+                  </Text>
+                )}
               </TouchableOpacity>
             </View>
 
@@ -451,6 +530,9 @@ const createStyles = (colors) => StyleSheet.create({
     backgroundColor: colors.orange,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  submitButtonDisabled: {
+    opacity: 0.6,
   },
   registerButton: {
     marginTop: 22,

@@ -1,11 +1,22 @@
 import React, { useMemo, useState } from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import {
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../theme/ThemeContext';
 import FadeInView from '../components/FadeInView';
 import ScreenHeader from '../components/ScreenHeader';
 import { Field, SelectField, ToggleCard } from '../components/FormField';
+import { tambahAlamat, updateAlamat } from '../lib/alamat';
+import { notify } from '../lib/notify';
 
 const LABELS = [
   { id: 'Home', icon: 'home-outline' },
@@ -16,30 +27,65 @@ const LABELS = [
 const STATES = ['California', 'Florida', 'Illinois', 'New Jersey', 'New York', 'Texas', 'Washington'];
 const COUNTRIES = ['United States', 'Canada', 'United Kingdom', 'Indonesia'];
 
-export default function AddAddress({ navigation }) {
+// Mengembalikan pesan error pertama, atau null kalau valid
+const validate = (f) => {
+  if (f.name.trim().length < 2) return 'Isi nama lengkap.';
+  if (f.phone.replace(/\D/g, '').length < 8) return 'Nomor telepon tidak valid.';
+  if (f.street.trim().length < 3) return 'Isi alamat jalan.';
+  if (!f.city.trim()) return 'Isi nama kota.';
+  if (f.zip.trim().length < 3) return 'Isi kode pos.';
+  return null;
+};
+
+export default function AddAddress({ navigation, route }) {
+  // Kalau dibuka dari tombol Edit, item alamat dikirim lewat route.params.item
+  const editing = route?.params?.item || null;
   const { theme } = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const insets = useSafeAreaInsets();
 
-  const [label, setLabel] = useState('Home');
+  const [label, setLabel] = useState(editing?.label || 'Home');
   const [form, setForm] = useState({
-    name: '', phone: '', street: '', apt: '', city: '', zip: '', note: '',
+    name: editing?.name || '',
+    phone: editing?.phone || '',
+    street: editing?.street || '',
+    apt: editing?.apt || '',
+    city: editing?.city || '',
+    zip: editing?.zip || '',
+    note: editing?.note || '',
   });
-  const [state, setState] = useState('New York');
-  const [country, setCountry] = useState('United States');
-  const [isDefault, setIsDefault] = useState(true);
+  const [state, setState] = useState(editing?.state || 'New York');
+  const [country, setCountry] = useState(editing?.country || 'United States');
+  const [isDefault, setIsDefault] = useState(editing ? editing.isDefault : true);
+  const [saving, setSaving] = useState(false);
 
   const set = (key) => (value) => setForm((f) => ({ ...f, [key]: value }));
 
-  const onSave = () => {
-    // TODO: simpan ke state global / backend
-    navigation.goBack();
+  const onSave = async () => {
+    if (saving) return;
+    const problem = validate(form);
+    if (problem) {
+      notify('Data belum lengkap', problem);
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const payload = { ...form, label, state, country, isDefault };
+      if (editing) await updateAlamat(editing.id, payload);
+      else await tambahAlamat(payload);
+      navigation.goBack(); // halaman Address memuat ulang saat fokus kembali
+    } catch (e) {
+      notify(editing ? 'Gagal memperbarui alamat' : 'Gagal menyimpan alamat', e.message);
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <ScreenHeader title="Add New Address" navigation={navigation} />
+        <ScreenHeader title={editing ? 'Edit Address' : 'Add New Address'} navigation={navigation} />
 
         <ScrollView
           contentContainerStyle={styles.scrollContent}
@@ -107,8 +153,18 @@ export default function AddAddress({ navigation }) {
         </ScrollView>
 
         <View style={{ paddingBottom: Math.max(insets.bottom, 12) }}>
-          <TouchableOpacity style={styles.saveButton} activeOpacity={0.85} onPress={onSave} accessibilityRole="button">
-            <Text style={styles.saveText}>Save Address</Text>
+          <TouchableOpacity
+            style={[styles.saveButton, saving && { opacity: 0.6 }]}
+            activeOpacity={0.85}
+            onPress={onSave}
+            disabled={saving}
+            accessibilityRole="button"
+          >
+            {saving ? (
+              <ActivityIndicator color={theme.onPrimary} />
+            ) : (
+              <Text style={styles.saveText}>{editing ? 'Update Address' : 'Save Address'}</Text>
+            )}
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>

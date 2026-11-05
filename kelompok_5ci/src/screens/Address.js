@@ -1,284 +1,183 @@
-import React, { useMemo } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import {
+  ActivityIndicator,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from 'react-native';
-import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useFocusEffect } from '@react-navigation/native';
+import { Ionicons } from '@expo/vector-icons';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../theme/ThemeContext';
+import FadeInView from '../components/FadeInView';
+import ScreenHeader from '../components/ScreenHeader';
+import { ambilAlamat, hapusAlamat, jadikanDefaultAlamat } from '../lib/alamat';
+import { confirmDialog, notify } from '../lib/notify';
 
-const addresses = [
-  {
-    id: 'home',
-    title: 'Home',
-    icon: 'home-outline',
-    tag: 'Default',
-    recipient: 'Sophie Miller',
-    street: '124 Maple Street, Apt 3B',
-    city: 'Brooklyn, NY 11201',
-    note: 'Leave at the door. Ring once, please.',
-  },
-  {
-    id: 'office',
-    title: 'Office',
-    icon: 'business-outline',
-    recipient: 'Sophie Miller',
-    street: '85 Water Street, Floor 4',
-    city: 'Brooklyn, NY 11201',
-    note: 'Reception desk · Mon–Fri, 9am–5pm',
-  },
-];
+const ICONS = { Home: 'home-outline', Office: 'business-outline', Other: 'location-outline' };
 
 export default function Address({ navigation }) {
   const { theme } = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
-  const goBack = () => {
-    if (navigation.canGoBack()) {
-      navigation.goBack();
-    } else {
-      navigation.navigate('Profile');
+  const insets = useSafeAreaInsets();
+
+  const [items, setItems] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  const muat = useCallback(async () => {
+    try {
+      setItems(await ambilAlamat());
+    } catch (e) {
+      notify('Gagal memuat alamat', e.message);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  // Muat ulang tiap kali halaman ini kembali fokus (mis. setelah AddAddress)
+  useFocusEffect(
+    useCallback(() => {
+      muat();
+    }, [muat]),
+  );
+
+  const onDefault = async (id) => {
+    try {
+      await jadikanDefaultAlamat(id);
+      await muat();
+    } catch (e) {
+      notify('Gagal mengubah alamat utama', e.message);
+    }
+  };
+
+  const onDelete = async (item) => {
+    const ok = await confirmDialog('Hapus alamat?', `${item.label} - ${item.street}`);
+    if (!ok) return;
+    try {
+      await hapusAlamat(item.id);
+      await muat();
+    } catch (e) {
+      notify('Gagal menghapus alamat', e.message);
     }
   };
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
-      <View style={styles.page}>
-        <View style={styles.header}>
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={goBack}
-            activeOpacity={0.7}
-            accessibilityRole="button"
-            accessibilityLabel="Back to Profile"
-          >
-            <Ionicons name="arrow-back" size={18} color={theme.text} />
-          </TouchableOpacity>
-          <Text style={styles.title}>Addresses</Text>
-        </View>
+    <SafeAreaView style={styles.safeArea} edges={['top']}>
+      <ScreenHeader title="Shipping Addresses" navigation={navigation} />
 
-        <ScrollView
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-        >
-          <Text style={styles.eyebrow}>FRESH TO YOUR DOOR</Text>
-          <Text style={styles.intro}>
-            Your favorite bread, delivered to the places you call yours.
-          </Text>
+      {loading ? (
+        <ActivityIndicator size="large" color={theme.primary} style={{ marginTop: 40 }} />
+      ) : (
+        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+          <FadeInView>
+            {items.length === 0 && (
+              <Text style={styles.empty}>Belum ada alamat. Tambahkan alamat pertamamu.</Text>
+            )}
 
-          {addresses.map((address) => (
-            <View key={address.id} style={styles.addressCard}>
-              <View style={styles.cardHeading}>
-                <View style={styles.addressTypeIcon}>
-                  <Ionicons name={address.icon} size={17} color={theme.primary} />
-                </View>
-                <Text style={styles.addressTitle}>{address.title}</Text>
-                {address.tag ? (
-                  <View style={styles.defaultTag}>
-                    <Text style={styles.defaultTagText}>{address.tag}</Text>
+            {items.map((a) => (
+              <View key={a.id} style={[styles.card, a.isDefault && styles.cardDefault]}>
+                <View style={styles.cardTop}>
+                  <View style={styles.labelRow}>
+                    <Ionicons name={ICONS[a.label] || 'location-outline'} size={18} color={theme.primary} />
+                    <Text style={styles.labelText}>{a.label}</Text>
                   </View>
-                ) : null}
-              </View>
+                  {a.isDefault && (
+                    <View style={styles.badge}>
+                      <Text style={styles.badgeText}>Default</Text>
+                    </View>
+                  )}
+                </View>
 
-              <Text style={styles.recipient}>{address.recipient}</Text>
-              <Text style={styles.addressText}>{address.street}</Text>
-              <Text style={styles.addressText}>{address.city}</Text>
+                <Text style={styles.name}>{a.name}</Text>
+                <Text style={styles.line}>{a.phone}</Text>
+                <Text style={styles.line}>{a.street}{a.apt ? `, ${a.apt}` : ''}</Text>
+                <Text style={styles.line}>{a.city}, {a.state} {a.zip}</Text>
+                <Text style={styles.line}>{a.country}</Text>
+                {!!a.note && <Text style={styles.note}>“{a.note}”</Text>}
 
-              <View style={styles.cardDivider} />
-              <View style={styles.cardFooter}>
-                <Text style={styles.deliveryNote}>{address.note}</Text>
                 <View style={styles.actions}>
-                  <Ionicons name="pencil-outline" size={16} color={theme.text} />
-                  <Ionicons name="trash-outline" size={16} color={theme.textMuted} />
+                  <TouchableOpacity
+                    onPress={() => navigation.navigate('AddAddress', { item: a })}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Edit alamat ${a.label}`}
+                    style={styles.editBtn}
+                  >
+                    <Ionicons name="create-outline" size={16} color={theme.primary} />
+                    <Text style={styles.actionText}>Edit</Text>
+                  </TouchableOpacity>
+                  {!a.isDefault && (
+                    <TouchableOpacity onPress={() => onDefault(a.id)} accessibilityRole="button">
+                      <Text style={styles.actionText}>Set as default</Text>
+                    </TouchableOpacity>
+                  )}
+                  <TouchableOpacity
+                    onPress={() => onDelete(a)}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Hapus alamat ${a.label}`}
+                    style={styles.deleteBtn}
+                  >
+                    <Ionicons name="trash-outline" size={16} color={theme.danger || '#D64545'} />
+                    <Text style={[styles.actionText, { color: theme.danger || '#D64545' }]}>Delete</Text>
+                  </TouchableOpacity>
                 </View>
               </View>
-            </View>
-          ))}
-
-          <View style={styles.deliveryInfo}>
-            <MaterialCommunityIcons
-              name="truck-delivery-outline"
-              size={16}
-              color={theme.textMuted}
-            />
-            <Text style={styles.deliveryInfoText}>
-              We deliver locally, Tuesday–Sunday. Your delivery fee is confirmed
-              at checkout.
-            </Text>
-          </View>
+            ))}
+          </FadeInView>
         </ScrollView>
+      )}
 
+      <View style={{ paddingBottom: Math.max(insets.bottom, 12) }}>
         <TouchableOpacity
           style={styles.addButton}
           activeOpacity={0.85}
           onPress={() => navigation.navigate('AddAddress')}
           accessibilityRole="button"
-          accessibilityLabel="Add new address"
         >
-          <Ionicons name="add" size={18} color={theme.onPrimary} />
-          <Text style={styles.addButtonText}>Add New Address</Text>
+          <Ionicons name="add" size={20} color={theme.onPrimary} />
+          <Text style={styles.addText}>Add New Address</Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>
   );
 }
 
-const createStyles = (t) => StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: t.background,
-  },
-  page: {
-    flex: 1,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingTop: 16,
-    paddingBottom: 18,
-  },
-  backButton: {
-    width: 36,
-    height: 36,
-    marginRight: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: t.border,
-    borderRadius: 12,
-    backgroundColor: t.surface,
-  },
-  title: {
-    color: t.text,
-    fontSize: 21,
-    fontWeight: '700',
-  },
-  scrollContent: {
-    paddingHorizontal: 20,
-    paddingBottom: 22,
-  },
-  eyebrow: {
-    marginTop: 3,
-    color: t.textMuted,
-    fontSize: 9,
-    fontWeight: '700',
-    letterSpacing: 1.1,
-  },
-  intro: {
-    marginTop: 7,
-    marginBottom: 16,
-    color: t.textMuted,
-    fontSize: 12,
-    lineHeight: 18,
-  },
-  addressCard: {
-    marginBottom: 9,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: t.border,
-    borderRadius: 14,
-    backgroundColor: t.surface,
-    shadowColor: t.shadow,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 5,
-    elevation: 1,
-  },
-  cardHeading: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 9,
-  },
-  addressTypeIcon: {
-    width: 27,
-    height: 27,
-    marginRight: 8,
-    borderRadius: 8,
-    backgroundColor: t.badgeBg,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  addressTitle: {
-    flex: 1,
-    color: t.text,
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  defaultTag: {
-    paddingHorizontal: 7,
-    paddingVertical: 4,
-    borderRadius: 7,
-    backgroundColor: t.badgeBg,
-  },
-  defaultTagText: {
-    color: t.primary,
-    fontSize: 8,
-    fontWeight: '600',
-  },
-  recipient: {
-    marginBottom: 3,
-    color: t.text,
-    fontSize: 10,
-    fontWeight: '700',
-  },
-  addressText: {
-    color: t.text,
-    fontSize: 10,
-    lineHeight: 15,
-  },
-  cardDivider: {
-    height: StyleSheet.hairlineWidth,
-    marginTop: 9,
-    marginBottom: 8,
-    backgroundColor: t.border,
-  },
-  cardFooter: {
-    minHeight: 20,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  deliveryNote: {
-    flex: 1,
-    color: t.textMuted,
-    fontSize: 8,
-  },
-  actions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 11,
-    marginLeft: 8,
-  },
-  deliveryInfo: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 8,
-    marginTop: 7,
-    paddingHorizontal: 2,
-  },
-  deliveryInfoText: {
-    flex: 1,
-    color: t.textMuted,
-    fontSize: 9,
-    lineHeight: 14,
-  },
-  addButton: {
-    minHeight: 42,
-    marginHorizontal: 20,
-    marginBottom: 8,
-    borderRadius: 9,
-    backgroundColor: t.primary,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-  },
-  addButtonText: {
-    color: t.onPrimary,
-    fontSize: 12,
-    fontWeight: '700',
-  },
-});
+const createStyles = (t) =>
+  StyleSheet.create({
+    safeArea: { flex: 1, backgroundColor: t.background },
+    scrollContent: { paddingHorizontal: 20, paddingBottom: 16 },
+    empty: { color: t.textMuted, textAlign: 'center', marginTop: 40, fontSize: 14 },
+    card: {
+      backgroundColor: t.surface,
+      borderRadius: 16,
+      borderWidth: 1,
+      borderColor: t.border,
+      padding: 16,
+      marginBottom: 14,
+    },
+    cardDefault: { borderColor: t.primary },
+    cardTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
+    labelRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+    labelText: { color: t.text, fontSize: 15, fontWeight: '700' },
+    badge: { backgroundColor: t.badgeBg, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4 },
+    badgeText: { color: t.primary, fontSize: 11, fontWeight: '700' },
+    name: { color: t.text, fontSize: 14, fontWeight: '600', marginBottom: 2 },
+    line: { color: t.textMuted, fontSize: 13, lineHeight: 20 },
+    note: { color: t.textMuted, fontSize: 12, fontStyle: 'italic', marginTop: 6 },
+    actions: { flexDirection: 'row', alignItems: 'center', gap: 16, marginTop: 14 },
+    editBtn: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+    actionText: { color: t.primary, fontSize: 13, fontWeight: '600' },
+    deleteBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, marginLeft: 'auto' },
+    addButton: {
+      height: 54,
+      marginHorizontal: 20,
+      borderRadius: 16,
+      backgroundColor: t.primary,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 6,
+    },
+    addText: { color: t.onPrimary, fontSize: 15, fontWeight: '700' },
+  });

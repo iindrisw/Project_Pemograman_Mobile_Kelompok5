@@ -1,11 +1,22 @@
 import React, { useMemo, useState } from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import {
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../theme/ThemeContext';
 import FadeInView from '../components/FadeInView';
 import ScreenHeader from '../components/ScreenHeader';
 import { Field, SelectField, ToggleCard } from '../components/FormField';
+import { luhnValid, tambahMetodeBayar, updateMetodeBayar } from '../lib/pembayaran';
+import { notify } from '../lib/notify';
 
 const COUNTRIES = ['United States', 'Canada', 'United Kingdom', 'Indonesia'];
 
@@ -15,28 +26,82 @@ const formatExpiry = (v) => {
   return d.length > 2 ? `${d.slice(0, 2)} / ${d.slice(2)}` : d;
 };
 
-export default function AddPayment({ navigation }) {
+// Mengembalikan { error } atau { expMonth, expYear }
+const parseExpiry = (text) => {
+  const d = text.replace(/\D/g, '');
+  if (d.length !== 4) return { error: 'Masa berlaku harus berformat MM / YY.' };
+  const expMonth = Number(d.slice(0, 2));
+  const expYear = 2000 + Number(d.slice(2));
+  if (expMonth < 1 || expMonth > 12) return { error: 'Bulan masa berlaku tidak valid.' };
+  const now = new Date();
+  const kadaluarsa =
+    expYear < now.getFullYear() || (expYear === now.getFullYear() && expMonth < now.getMonth() + 1);
+  if (kadaluarsa) return { error: 'Kartu sudah kedaluwarsa.' };
+  return { expMonth, expYear };
+};
+
+export default function AddPayment({ navigation, route }) {
+  // Kalau dibuka dari tombol Edit, item kartu dikirim lewat route.params.item
+  const editing = route?.params?.item || null;
   const { theme } = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const insets = useSafeAreaInsets();
 
-  const [name, setName] = useState('');
-  const [number, setNumber] = useState('');
-  const [expiry, setExpiry] = useState('');
+  const [name, setName] = useState(editing?.holder || '');
+  const [number, setNumber] = useState(editing ? `•••• •••• •••• ${editing.last4}` : '');
+  const [expiry, setExpiry] = useState(
+    editing ? `${String(editing.expMonth).padStart(2, '0')} / ${String(editing.expYear).slice(-2)}` : '',
+  );
   const [cvv, setCvv] = useState('');
-  const [country, setCountry] = useState('United States');
-  const [zip, setZip] = useState('');
-  const [isDefault, setIsDefault] = useState(true);
+  const [country, setCountry] = useState(editing?.country || 'United States');
+  const [zip, setZip] = useState(editing?.zip || '');
+  const [isDefault, setIsDefault] = useState(editing ? editing.isDefault : true);
+  const [saving, setSaving] = useState(false);
 
-  const onSave = () => {
-    // TODO: kirim ke payment provider (jangan simpan nomor kartu mentah)
-    navigation.goBack();
+  const onSave = async () => {
+    if (saving) return;
+
+    const digits = number.replace(/\D/g, '');
+    const exp = parseExpiry(expiry);
+
+    let problem = null;
+    if (name.trim().length < 2) problem = 'Isi nama pemilik kartu.';
+    else if (!editing && (digits.length < 13 || !luhnValid(digits))) problem = 'Nomor kartu tidak valid.';
+    else if (exp.error) problem = exp.error;
+    else if (!editing && cvv.length < 3) problem = 'Kode keamanan (CVV) tidak valid.';
+
+    if (problem) {
+      notify('Data belum lengkap', problem);
+      return;
+    }
+
+    setSaving(true);
+    try {
+      // Hanya brand, 4 digit terakhir, dan masa berlaku yang disimpan.
+      // Nomor penuh dan CVV tidak dikirim ke database.
+      const payload = {
+        holder: name,
+        number: digits,
+        expMonth: exp.expMonth,
+        expYear: exp.expYear,
+        country,
+        zip,
+        isDefault,
+      };
+      if (editing) await updateMetodeBayar(editing.id, payload);
+      else await tambahMetodeBayar(payload);
+      navigation.goBack();
+    } catch (e) {
+      notify(editing ? 'Gagal memperbarui kartu' : 'Gagal menyimpan kartu', e.message);
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <ScreenHeader title="Add New Payment" navigation={navigation} />
+        <ScreenHeader title={editing ? 'Edit Payment' : 'Add New Payment'} navigation={navigation} />
 
         <ScrollView
           contentContainerStyle={styles.scrollContent}
@@ -62,7 +127,8 @@ export default function AddPayment({ navigation }) {
               label="Card number"
               placeholder="4242 4242 4242 4242"
               value={number}
-              onChangeText={(v) => setNumber(formatCardNumber(v))}
+              onChangeText={(v) => { if (!editing) setNumber(formatCardNumber(v)); }}
+              editable={!editing}
               keyboardType="number-pad"
               maxLength={19}
               textContentType="creditCardNumber"
@@ -72,17 +138,19 @@ export default function AddPayment({ navigation }) {
             <View style={styles.row}>
               <Field label="Expiry date" style={styles.half} placeholder="MM / YY"
                 value={expiry} onChangeText={(v) => setExpiry(formatExpiry(v))} keyboardType="number-pad" maxLength={7} />
-              <Field
-                label="Security code (CVV)"
-                style={styles.half}
-                placeholder="•••"
-                value={cvv}
-                onChangeText={(v) => setCvv(v.replace(/\D/g, '').slice(0, 4))}
-                keyboardType="number-pad"
-                secureTextEntry
-                maxLength={4}
-                right={<Ionicons name="help-circle-outline" size={22} color={theme.textMuted} />}
-              />
+              {!editing && (
+                <Field
+                  label="Security code (CVV)"
+                  style={styles.half}
+                  placeholder="•••"
+                  value={cvv}
+                  onChangeText={(v) => setCvv(v.replace(/\D/g, '').slice(0, 4))}
+                  keyboardType="number-pad"
+                  secureTextEntry
+                  maxLength={4}
+                  right={<Ionicons name="help-circle-outline" size={22} color={theme.textMuted} />}
+                />
+              )}
             </View>
 
             <View style={styles.row}>
@@ -100,14 +168,24 @@ export default function AddPayment({ navigation }) {
 
             <View style={styles.secureRow}>
               <Ionicons name="lock-closed-outline" size={16} color={theme.textMuted} />
-              <Text style={styles.secureText}>Encrypted & secure. Always.</Text>
+              <Text style={styles.secureText}>Only the last 4 digits are stored. Never the full number or CVV.</Text>
             </View>
           </FadeInView>
         </ScrollView>
 
         <View style={{ paddingBottom: Math.max(insets.bottom, 12) }}>
-          <TouchableOpacity style={styles.saveButton} activeOpacity={0.85} onPress={onSave} accessibilityRole="button">
-            <Text style={styles.saveText}>Save Payment</Text>
+          <TouchableOpacity
+            style={[styles.saveButton, saving && { opacity: 0.6 }]}
+            activeOpacity={0.85}
+            onPress={onSave}
+            disabled={saving}
+            accessibilityRole="button"
+          >
+            {saving ? (
+              <ActivityIndicator color={theme.onPrimary} />
+            ) : (
+              <Text style={styles.saveText}>{editing ? 'Update Payment' : 'Save Payment'}</Text>
+            )}
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
@@ -135,7 +213,7 @@ const createStyles = (t) =>
     row: { flexDirection: 'row', gap: 12 },
     half: { flex: 1 },
     secureRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 4 },
-    secureText: { color: t.textMuted, fontSize: 12 },
+    secureText: { color: t.textMuted, fontSize: 12, flexShrink: 1, textAlign: 'center' },
     saveButton: {
       height: 54,
       marginHorizontal: 20,
