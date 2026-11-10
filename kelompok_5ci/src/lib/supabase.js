@@ -1,21 +1,22 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createClient } from '@supabase/supabase-js';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-// URL dan publishable key dibaca dari file .env di root proyek (awalan EXPO_PUBLIC_ wajib).
-const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL;
-const SUPABASE_KEY = process.env.EXPO_PUBLIC_SUPABASE_KEY;
+// Nilai diambil dari file .env di root project (bukan ditulis langsung di kode).
+const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
+const supabaseKey = process.env.EXPO_PUBLIC_SUPABASE_KEY;
 
-if (!SUPABASE_URL || !SUPABASE_KEY) {
+if (!supabaseUrl || !supabaseKey) {
   console.warn(
-    'Supabase belum dikonfigurasi: isi EXPO_PUBLIC_SUPABASE_URL dan EXPO_PUBLIC_SUPABASE_KEY di .env, lalu jalankan ulang dengan `npx expo start -c`.',
+    '[supabase] EXPO_PUBLIC_SUPABASE_URL / EXPO_PUBLIC_SUPABASE_KEY belum terbaca. ' +
+      'Pastikan file bernama ".env" ada di root project, lalu jalankan: npx expo start -c',
   );
 }
 
-export const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, {
+export const supabase = createClient(supabaseUrl, supabaseKey, {
   auth: {
-    storage: AsyncStorage, // sesi login tersimpan (dipakai nanti bila pakai Supabase Auth)
+    storage: AsyncStorage,      // session disimpan, jadi tidak logout saat aplikasi ditutup
     autoRefreshToken: true,
     persistSession: true,
-    detectSessionInUrl: false,
+    detectSessionInUrl: false,  // tidak dipakai di React Native / tanpa login OAuth
   },
 });
