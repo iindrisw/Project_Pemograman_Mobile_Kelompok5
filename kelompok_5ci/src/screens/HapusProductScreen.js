@@ -1,10 +1,12 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
+import { CommonActions } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../theme/ThemeContext';
 import ScreenHeader from '../components/ScreenHeader';
 import { supabase } from '../lib/supabase';
 import { hapusFoto } from '../lib/produk';
+import { useProfil } from '../lib/auth';
 
 export default function HapusProductScreen({ route, navigation }) {
   const { item } = route.params; // Menerima data produk yang akan dihapus
@@ -13,17 +15,50 @@ export default function HapusProductScreen({ route, navigation }) {
   
   const [loading, setLoading] = useState(false);
   const [hasil, setHasil] = useState(null); // null | { tipe: 'sukses' } | { tipe: 'gagal', pesan: string }
+  const sedangKeluar = useRef(false);
+
+  // Reset ke Home: seluruh tumpukan layar (termasuk halaman produk yang sudah dihapus) dibuang.
+  const keHome = () => {
+    sedangKeluar.current = true;
+    navigation.dispatch(CommonActions.reset({ index: 0, routes: [{ name: 'Home' }] }));
+  };
+
+  // Hanya admin yang boleh di sini. User biasa dikembalikan ke Home.
+  const { isAdmin, loading: memuatProfil } = useProfil();
+  useEffect(() => {
+    if (!memuatProfil && !isAdmin) keHome();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [memuatProfil, isAdmin]);
+
+  // Setelah produk terhapus, tombol/gestur "back" apa pun tidak boleh kembali ke halaman produk.
+  useEffect(() => {
+    if (hasil?.tipe !== 'sukses') return undefined;
+    return navigation.addListener('beforeRemove', (e) => {
+      if (sedangKeluar.current) return;
+      e.preventDefault();
+      keHome();
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hasil, navigation]);
+
+  if (!memuatProfil && !isAdmin) return null;
 
   const prosesHapus = async () => {
     setLoading(true);
     try {
       // 1. Hapus data dari tabel 'products'
-      const { error } = await supabase
+      // .select() supaya kelihatan berapa baris yang benar-benar terhapus
+      // (tanpa izin admin, database diam-diam menghapus 0 baris tanpa error).
+      const { data, error } = await supabase
         .from('products')
         .delete()
-        .eq('id', item.id);
+        .eq('id', item.id)
+        .select('id');
 
       if (error) throw error;
+      if (!data || data.length === 0) {
+        throw new Error('Produk tidak ditemukan atau kamu tidak punya izin untuk menghapusnya.');
+      }
 
       // 2. Hapus file foto dari storage jika ada
       const fotoUrl = item.foto_url || item.image;
@@ -94,7 +129,7 @@ export default function HapusProductScreen({ route, navigation }) {
           <View style={styles.buttonsModal}>
             <TouchableOpacity
               style={[styles.btn, styles.btnPrimaryModal]}
-              onPress={() => navigation.goBack()}
+              onPress={keHome}
               activeOpacity={0.8}
             >
               <Text style={styles.btnPrimaryTextModal}>Kembali ke Dashboard</Text>

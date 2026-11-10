@@ -8,11 +8,13 @@ import {
   View,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useFocusEffect } from '@react-navigation/native';
+import { CommonActions, useFocusEffect } from '@react-navigation/native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../theme/ThemeContext';
 import { useCart } from '../context/CartContext';
+import { supabase } from '../lib/supabase';
 import { ambilProduk } from '../lib/produk';
+import { useProfil } from '../lib/auth';
 
 const parsePrice = (price) => {
   const n = parseFloat(String(price).replace(/[^0-9.]/g, ''));
@@ -24,20 +26,35 @@ export default function ProductDetailScreen({ navigation, route }) {
   const styles = useMemo(() => createStyles(theme), [theme]);
   const insets = useSafeAreaInsets();
   const { addToCart, cartItems } = useCart();
+  const { isAdmin } = useProfil(); // Ubah/Hapus hanya untuk admin
 
+  // Item awal dari Menu/Home; di-refresh dari Supabase tiap layar kembali fokus
+  // (mis. setelah Ubah Produk), supaya data yang tampil tidak basi.
   const [item, setItem] = useState(route?.params?.item);
   const [qty, setQty] = useState(1);
   const [added, setAdded] = useState(false);
+
+  const keHome = () =>
+    navigation.dispatch(CommonActions.reset({ index: 0, routes: [{ name: 'Home' }] }));
 
   useFocusEffect(
     useCallback(() => {
       let aktif = true;
       if (item?.id) {
+        // Produk sudah dihapus? Jangan pernah ditampilkan lagi: kembali ke Home.
+        supabase
+          .from('products')
+          .select('id')
+          .eq('id', item.id)
+          .maybeSingle()
+          .then(({ data, error }) => { if (aktif && !error && !data) keHome(); })
+          .catch(() => {});
         ambilProduk(item.id)
           .then((terbaru) => { if (aktif && terbaru) setItem(terbaru); })
-          .catch(() => {});
+          .catch(() => {}); // gagal refresh: tetap pakai data yang ada
       }
       return () => { aktif = false; };
+      // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [item?.id]),
   );
 
@@ -63,11 +80,6 @@ export default function ProductDetailScreen({ navigation, route }) {
   const handleAdd = () => {
     for (let i = 0; i < qty; i += 1) addToCart(item);
     setAdded(true);
-  };
-
-  // Navigasi ke HapusProductScreen
-  const hapusProduk = () => {
-    navigation.navigate('HapusProduct', { item });
   };
 
   const facts = [
@@ -129,6 +141,9 @@ export default function ProductDetailScreen({ navigation, route }) {
           {item.description || 'Freshly baked in our kitchen, made with simple, honest ingredients.'}
         </Text>
 
+        {/* Kelola produk (Update & Delete): hanya admin */}
+        {isAdmin && (
+          <>
         <Text style={styles.sectionTitle}>Kelola produk</Text>
         <View style={styles.manageRow}>
           <TouchableOpacity
@@ -142,7 +157,7 @@ export default function ProductDetailScreen({ navigation, route }) {
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.manageBtn, styles.deleteBtn]}
-            onPress={hapusProduk}
+            onPress={() => navigation.navigate('HapusProduct', { item })}
             activeOpacity={0.85}
             accessibilityRole="button"
           >
@@ -152,6 +167,8 @@ export default function ProductDetailScreen({ navigation, route }) {
             </Text>
           </TouchableOpacity>
         </View>
+          </>
+        )}
       </ScrollView>
 
       <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 16) }]}>

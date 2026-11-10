@@ -1,5 +1,6 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { View, StyleSheet } from 'react-native';
+import { CommonActions } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../theme/ThemeContext';
 import ScreenHeader from '../components/ScreenHeader';
@@ -7,6 +8,7 @@ import ProductForm from '../components/ProductForm';
 import ProductResultModal from '../components/ProductResultModal'; // 👈 Import modal hasil yang sama
 import { supabase } from '../lib/supabase';
 import { uploadFoto, hapusFoto } from '../lib/produk';
+import { useProfil } from '../lib/auth';
 
 export default function EditProductScreen({ route, navigation }) {
   const item = route.params.item;
@@ -15,6 +17,17 @@ export default function EditProductScreen({ route, navigation }) {
   
   // State untuk mengontrol tampilan modal sukses / gagal
   const [hasil, setHasil] = useState(null);
+
+  const keHome = () =>
+    navigation.dispatch(CommonActions.reset({ index: 0, routes: [{ name: 'Home' }] }));
+
+  // Hanya admin yang boleh di sini. User biasa dikembalikan ke Home.
+  const { isAdmin, loading: memuatProfil } = useProfil();
+  useEffect(() => {
+    if (!memuatProfil && !isAdmin) keHome();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [memuatProfil, isAdmin]);
+  if (!memuatProfil && !isAdmin) return null;
 
   const initial = {
     nama: item.name,
@@ -67,7 +80,7 @@ export default function EditProductScreen({ route, navigation }) {
       <ProductResultModal
         hasil={hasil}
         onTambahLagi={() => navigation.goBack()} // Untuk edit, tombol "Tambah Lain" bisa langsung kembali ke dashboard/list
-        onKembali={() => navigation.goBack()}
+        onKembali={keHome} // langsung ke Home (bukan kembali ke halaman produk)
         onCobaLagi={tutupError}
         t={theme}
       />

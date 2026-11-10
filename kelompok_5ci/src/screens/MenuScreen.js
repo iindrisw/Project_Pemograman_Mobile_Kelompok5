@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import {
   StyleSheet,
   Text,
@@ -17,8 +17,12 @@ import { useTheme } from '../theme/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
 import { useCart } from '../context/CartContext';
 import { ambilSemuaProduk, KATEGORI } from '../lib/produk';
+import { useProfil } from '../lib/auth';
 
 const CATEGORIES = ['All', ...KATEGORI];
+
+// Samakan "Pastries" / "Pastry", "Cakes" / "Cake" supaya kategori dari Home cocok.
+const norm = (s) => String(s || '').toLowerCase().trim().replace(/ies$/, 'y').replace(/s$/, '');
 
 /* ------------------------------- Kartu produk ------------------------------- */
 function GridCard({ item, width, onAdd, onPress }) {
@@ -50,13 +54,22 @@ function GridCard({ item, width, onAdd, onPress }) {
 }
 
 /* --------------------------------- Layar Menu --------------------------------- */
-export default function MenuScreen({ navigation }) {
+export default function MenuScreen({ navigation, route }) {
   const { theme } = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const { width } = useWindowDimensions();
   const insets = useSafeAreaInsets();
+  const { isAdmin } = useProfil(); // tombol tambah produk hanya untuk admin
 
   const [selectedCategory, setSelectedCategory] = useState('All');
+
+  // Dari Home: ketuk Bread / Pastries / Cakes -> Menu langsung terfilter kategori itu.
+  useEffect(() => {
+    const k = route?.params?.kategori;
+    if (!k) return;
+    const cocok = CATEGORIES.find((c) => norm(c) === norm(k));
+    setSelectedCategory(cocok || 'All');
+  }, [route?.params?.kategori, route?.params?.nonce]);
 
   // Data produk dari Supabase (tabel products), diurutkan dari yang terbaru.
   const [items, setItems] = useState([]);
@@ -106,15 +119,17 @@ export default function MenuScreen({ navigation }) {
       <View style={styles.header}>
         <Text style={styles.title}>Menu</Text>
         <View style={styles.headerActions}>
-          <TouchableOpacity
-            style={styles.actionBtn}
-            activeOpacity={0.7}
-            onPress={() => navigation.navigate('AddProduct')}
-            accessibilityRole="button"
-            accessibilityLabel="Tambah produk"
-          >
-            <Ionicons name="add" size={26} color={theme.primary} />
-          </TouchableOpacity>
+          {isAdmin && (
+            <TouchableOpacity
+              style={styles.actionBtn}
+              activeOpacity={0.7}
+              onPress={() => navigation.navigate('AddProduct')}
+              accessibilityRole="button"
+              accessibilityLabel="Tambah produk"
+            >
+              <Ionicons name="add" size={26} color={theme.primary} />
+            </TouchableOpacity>
+          )}
           <TouchableOpacity style={styles.actionBtn} activeOpacity={0.7}>
             <Ionicons name="search-outline" size={24} color={theme.primary} />
           </TouchableOpacity>
@@ -171,7 +186,9 @@ export default function MenuScreen({ navigation }) {
           loading ? (
             <ActivityIndicator size="large" color={theme.primary} style={{ marginTop: 40 }} />
           ) : (
-            <Text style={styles.emptyText}>Belum ada produk. Ketuk + untuk menambah.</Text>
+            <Text style={styles.emptyText}>
+              {isAdmin ? 'Belum ada produk. Ketuk + untuk menambah.' : 'Belum ada produk yang tersedia.'}
+            </Text>
           )
         }
         showsVerticalScrollIndicator={false}

@@ -15,6 +15,7 @@ import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTheme } from '../theme/ThemeContext';
 import { useCart } from '../context/CartContext';
 import { ambilSemuaProduk } from '../lib/produk';
+import { ambilIdTerlaris } from '../lib/penjualan';
 
 /* ----------------------------- Static dummy data ----------------------------- */
 const categories = [
@@ -27,12 +28,6 @@ const IMG_SOURDOUGH = 'https://images.unsplash.com/photo-1589367920969-ab8e050bb
 const IMG_CROISSANT = 'https://images.unsplash.com/photo-1555507036-ab1f4038808a?w=500';
 const IMG_BREAD = 'https://images.unsplash.com/photo-1509440159596-0249088772ff?w=500';
 const IMG_TART = 'https://images.unsplash.com/photo-1519915028121-7d3463d20b13?w=500';
-
-const bestSellers = [
-  { id: '101', name: 'Classic Sourdough', price: '$6.50', image: IMG_SOURDOUGH },
-  { id: '102', name: 'Classic Butter Croissant', price: '$3.50', image: IMG_CROISSANT },
-  { id: '103', name: 'Chocolate Sourdough', price: '$5.25', image: IMG_BREAD },
-];
 
 /* Slide carousel di Home (isi informasi, silakan ganti teksnya) */
 const heroSlides = [
@@ -160,14 +155,21 @@ export default function HomeScreen({ navigation }) {
   // New Arrivals = produk terbaru dari Supabase (urut created_at desc).
   const [produkBaru, setProdukBaru] = useState([]);
   const [memuat, setMemuat] = useState(true);
+  const [idTerlaris, setIdTerlaris] = useState([]); // id produk, urut dari paling laris
 
   useFocusEffect(
     useCallback(() => {
       let aktif = true;
       (async () => {
         try {
-          const data = await ambilSemuaProduk();
-          if (aktif) setProdukBaru(data);
+          const [data, idLaris] = await Promise.all([
+            ambilSemuaProduk(),
+            ambilIdTerlaris(6).catch(() => []), // gagal menghitung terlaris: kosongkan saja
+          ]);
+          if (aktif) {
+            setProdukBaru(data);
+            setIdTerlaris(idLaris);
+          }
         } catch (e) {
           // gagal memuat: daftar dibiarkan kosong
         } finally {
@@ -176,6 +178,14 @@ export default function HomeScreen({ navigation }) {
       })();
       return () => { aktif = false; };
     }, []),
+  );
+
+  // Best Sellers = produk asli, urut dari yang paling banyak dibeli SEMUA akun.
+  const bestSellers = useMemo(
+    () => idTerlaris
+      .map((id) => produkBaru.find((p) => String(p.id) === id))
+      .filter(Boolean),
+    [idTerlaris, produkBaru],
   );
 
   const handleAdd = (item) => {
@@ -227,7 +237,14 @@ export default function HomeScreen({ navigation }) {
       {/* 3. Categories */}
       <View style={styles.categoryContainer}>
         {categories.map((cat) => (
-          <TouchableOpacity key={cat.id} style={styles.categoryCard} activeOpacity={0.8}>
+          <TouchableOpacity
+            key={cat.id}
+            style={styles.categoryCard}
+            activeOpacity={0.8}
+            onPress={() => navigation.navigate('Menu', { kategori: cat.name, nonce: Date.now() })}
+            accessibilityRole="button"
+            accessibilityLabel={`Lihat kategori ${cat.name}`}
+          >
             <View style={styles.categoryIconCircle}>
               <MaterialCommunityIcons name={cat.icon} size={26} color={theme.primary} />
             </View>
@@ -238,23 +255,29 @@ export default function HomeScreen({ navigation }) {
 
       {/* 4. Best Sellers (horizontal FlatList) */}
       <Text style={[styles.sectionTitle, styles.sectionSpacing]}>Best Sellers</Text>
-      <FlatList
-        data={bestSellers}
-        keyExtractor={(item) => item.id}
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.horizontalList}
-        ItemSeparatorComponent={() => <View style={{ width: 14 }} />}
-        renderItem={({ item }) => (
-          <ProductCard
-            image={item.image}
-            name={item.name}
-            price={item.price}
-            onAddToCart={() => handleAdd(item)}
-            style={{ width: 180 }}
-          />
-        )}
-      />
+      {bestSellers.length > 0 ? (
+        <FlatList
+          data={bestSellers}
+          keyExtractor={(item) => item.id}
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.horizontalList}
+          ItemSeparatorComponent={() => <View style={{ width: 14 }} />}
+          renderItem={({ item }) => (
+            <ProductCard
+              image={item.image}
+              name={item.name}
+              price={item.price}
+              onAddToCart={() => handleAdd(item)}
+              style={{ width: 180 }}
+            />
+          )}
+        />
+      ) : (
+        <Text style={styles.emptyText}>
+          {memuat ? 'Memuat…' : 'Belum ada data penjualan.'}
+        </Text>
+      )}
 
       {/* 5. New Arrivals title */}
       <View style={[styles.sectionHeader, styles.sectionSpacing]}>
