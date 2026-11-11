@@ -7,12 +7,14 @@ import {
   TouchableOpacity,
   Image,
   TextInput,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons, Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useCart } from '../context/CartContext';
 import { useTheme } from '../theme/ThemeContext';
 import BottomNav from '../components/BottomNav'; // Import BottomNav terpisah
+import { catatPenjualan, buatNomorPesanan } from '../lib/penjualan';
 
 export default function CartScreen({ navigation }) {
   const { theme } = useTheme();
@@ -20,9 +22,34 @@ export default function CartScreen({ navigation }) {
   const insets = useSafeAreaInsets();
 
   // Mengambil data dan fungsi langsung dari CartContext
-  const { cartItems, increaseQty, decreaseQty, subtotal } = useCart();
+  const { cartItems, increaseQty, decreaseQty, clearCart, subtotal } = useCart();
   const [orderNotes, setOrderNotes] = useState('');
   const isEmpty = cartItems.length === 0;
+  const [memproses, setMemproses] = useState(false);
+  const [errorCheckout, setErrorCheckout] = useState('');
+
+  // Simpan pesanan ke database, kosongkan keranjang, lalu tampilkan layar sukses.
+  // Keranjang HANYA dikosongkan kalau penyimpanan berhasil.
+  const handleCheckout = async () => {
+    if (isEmpty || memproses) return;
+    setErrorCheckout('');
+    setMemproses(true);
+    try {
+      const nomorPesanan = buatNomorPesanan();
+      const total = `$${subtotal.toFixed(2)}`;
+      await catatPenjualan(cartItems, { nomorPesanan, catatan: orderNotes });
+      clearCart();
+      navigation.navigate('CheckoutSuccess', { orderId: nomorPesanan, totalAmount: total });
+    } catch (e) {
+      setErrorCheckout(
+        /row-level security|jwt|not authenticated/i.test(e?.message || '')
+          ? 'Silakan login dulu untuk memesan.'
+          : e?.message || 'Gagal menyimpan pesanan. Coba lagi.',
+      );
+    } finally {
+      setMemproses(false);
+    }
+  };
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -135,17 +162,20 @@ export default function CartScreen({ navigation }) {
 
       {/* Tombol Checkout di Atas BottomNav */}
       <View style={[styles.footer, { bottom: 70, paddingBottom: 12 }]}>
+        {!!errorCheckout && <Text style={styles.checkoutError}>{errorCheckout}</Text>}
         <TouchableOpacity
-          style={[styles.checkoutButton, isEmpty && styles.checkoutButtonDisabled]}
-          disabled={isEmpty}
-          onPress={() =>
-            navigation.navigate('CheckoutSuccess', { totalAmount: `$${subtotal.toFixed(2)}` })
-          }
+          style={[styles.checkoutButton, (isEmpty || memproses) && styles.checkoutButtonDisabled]}
+          disabled={isEmpty || memproses}
+          onPress={handleCheckout}
           activeOpacity={0.85}
           accessibilityRole="button"
-          accessibilityState={{ disabled: isEmpty }}
+          accessibilityState={{ disabled: isEmpty || memproses, busy: memproses }}
         >
-          <Text style={styles.checkoutButtonText}>Pesan Sekarang (Checkout)</Text>
+          {memproses ? (
+            <ActivityIndicator color={theme.onPrimary} />
+          ) : (
+            <Text style={styles.checkoutButtonText}>Pesan Sekarang (Checkout)</Text>
+          )}
         </TouchableOpacity>
       </View>
 
@@ -263,5 +293,6 @@ const createStyles = (t) =>
     },
     checkoutButton: { backgroundColor: t.primary, borderRadius: 16, paddingVertical: 16, alignItems: 'center' },
     checkoutButtonDisabled: { opacity: 0.45 },
+    checkoutError: { color: t.danger || '#D64545', fontSize: 12, textAlign: 'center', marginBottom: 8 },
     checkoutButtonText: { color: t.onPrimary, fontSize: 16, fontWeight: 'bold' },
   });

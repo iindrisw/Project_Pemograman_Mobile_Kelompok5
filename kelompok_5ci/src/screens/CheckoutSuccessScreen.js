@@ -79,7 +79,7 @@ export default function CheckoutSuccessScreen({ navigation, route }) {
         <FadeInView delay={360} style={styles.infoBox}>
           <MaterialCommunityIcons name="information-outline" size={20} color={theme.primary} />
           <Text style={styles.infoText}>
-            Our bakers have started on your order. You can follow its progress in My Orders.
+            Our bakers have started on your order. You can find it anytime in My Orders.
           </Text>
         </FadeInView>
       </ScrollView>
@@ -91,7 +91,7 @@ export default function CheckoutSuccessScreen({ navigation, route }) {
           onPress={() => navigation.navigate('MyOrders')}
           accessibilityRole="button"
         >
-          <Text style={styles.primaryBtnText}>Track my order</Text>
+          <Text style={styles.primaryBtnText}>View my orders</Text>
         </TouchableOpacity>
 
         <TouchableOpacity

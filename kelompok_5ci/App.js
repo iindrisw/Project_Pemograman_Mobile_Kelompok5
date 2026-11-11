@@ -22,8 +22,6 @@ import HapusProductScreen from './src/screens/HapusProductScreen';
 import CheckoutSuccessScreen from './src/screens/CheckoutSuccessScreen';
 import ProfileScreen from './src/screens/ProfileScreen';
 import MyOrders from './src/screens/MyOrders';
-import Address from './src/screens/Address';
-import AddAddress from './src/screens/AddAddress';
 import Payments from './src/screens/Payments';
 import AddPayment from './src/screens/AddPayment';
 import Settings from './src/screens/Settings';
@@ -64,8 +62,6 @@ function RootNavigator() {
           <Stack.Screen name="Profile" component={ProfileScreen} options={{ animation: 'fade_from_bottom' }} />
 
           <Stack.Screen name="MyOrders" component={MyOrders} />
-          <Stack.Screen name="Address" component={Address} />
-          <Stack.Screen name="AddAddress" component={AddAddress} />
           <Stack.Screen name="Payments" component={Payments} />
           <Stack.Screen name="AddPayment" component={AddPayment} />
           <Stack.Screen name="Settings" component={Settings} />

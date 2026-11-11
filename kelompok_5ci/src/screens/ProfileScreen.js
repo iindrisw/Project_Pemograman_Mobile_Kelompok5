@@ -13,11 +13,11 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useTheme } from '../theme/ThemeContext';
 import FadeInView from '../components/FadeInView';
 import { supabase } from '../lib/supabase';
+import { useProfil } from '../lib/auth';
 
 // Nama route tiap menu (harus sama dengan name di Stack.Screen pada App.js)
 const routeByLabel = {
   'My Orders': 'MyOrders',
-  'Shipping Addresses': 'Address',
   'Payment Methods': 'Payments',
   'Settings': 'Settings',
   'Help & Support': 'Support',
@@ -25,7 +25,6 @@ const routeByLabel = {
 
 const profileOptions = [
   { label: 'My Orders', icon: 'bag-handle-outline' },
-  { label: 'Shipping Addresses', icon: 'location-outline' },
   { label: 'Payment Methods', icon: 'card-outline' },
   { label: 'Settings', icon: 'settings-outline' },
   { label: 'Help & Support', icon: 'help-circle-outline' },
@@ -36,6 +35,7 @@ export default function ProfileScreen({ navigation }) {
   const styles = useMemo(() => createStyles(theme), [theme]);
   const insets = useSafeAreaInsets();
   const [username, setUsername] = useState('');
+  const { isAdmin, profil } = useProfil();
 
   // Ambil username dari akun Supabase yang sedang login
   useEffect(() => {
@@ -47,7 +47,8 @@ export default function ProfileScreen({ navigation }) {
   }, []);
 
   const goToHome = () => navigation.navigate('Home');
-  const goToMenu = () => navigation.navigate('UserMenu');
+  // Admin ke Menu (ada tombol kelola produk), user biasa ke UserMenu
+  const goToMenu = () => navigation.navigate(isAdmin ? 'Menu' : 'UserMenu');
 
   const logOut = async () => {
     try {
@@ -80,7 +81,7 @@ export default function ProfileScreen({ navigation }) {
               style={styles.avatar}
               accessibilityLabel="Profile photo"
             />
-            <Text style={styles.name}>{username || 'Guest'}</Text>
+            <Text style={styles.name}>{username || profil?.username || 'Guest'}</Text>
           </View>
 
           <View style={styles.optionsCard}>

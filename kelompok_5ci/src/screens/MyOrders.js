@@ -1,5 +1,6 @@
-import React, { useState, useMemo } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import {
+  ActivityIndicator,
   Image,
   ScrollView,
   StyleSheet,
@@ -8,75 +9,59 @@ import {
   View,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useFocusEffect } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../theme/ThemeContext';
-import BottomNav from '../components/BottomNav'; // Import BottomNav terpisah
+import BottomNav from '../components/BottomNav';
+import { ambilRiwayatPesanan } from '../lib/penjualan';
 
-const ongoingOrders = [
-  {
-    id: '#1052',
-    date: '21 Okt 2026',
-    name: 'The breakfast box',
-    details: '2 croissants · 1 sourdough',
-    price: 'Rp 385.000',
-    status: 'Sedang Disiapkan',
-    image: 'https://images.unsplash.com/photo-1589367920969-ab8e050bbb04?w=240&h=180&fit=crop',
-  },
-  {
-    id: '#1049',
-    date: '20 Okt 2026',
-    name: 'A little afternoon joy',
-    details: '4 cinnamon rolls',
-    price: 'Rp 285.000',
-    status: 'Dalam Perjalanan',
-    image: 'https://images.unsplash.com/photo-1509365465985-25d11c17e812?w=240&h=180&fit=crop',
-  },
-];
+const BULAN = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
 
-const previousOrders = [
-  {
-    id: '#1048',
-    date: '12 Okt 2026',
-    name: 'The breakfast box',
-    details: '2 croissants · 1 sourdough',
-    price: 'Rp 385.000',
-    status: 'Terkirim',
-    image: 'https://images.unsplash.com/photo-1589367920969-ab8e050bbb04?w=240&h=180&fit=crop',
-  },
-  {
-    id: '#1026',
-    date: '05 Okt 2026',
-    name: 'A little afternoon joy',
-    details: '4 cinnamon rolls',
-    price: 'Rp 285.000',
-    status: 'Terkirim',
-    image: 'https://images.unsplash.com/photo-1509365465985-25d11c17e812?w=240&h=180&fit=crop',
-  },
-  {
-    id: '#0991',
-    date: '28 Sep 2026',
-    name: 'Your daily sourdough',
-    details: '1 country loaf · 1 baguette',
-    price: 'Rp 230.000',
-    status: 'Terkirim',
-    image: 'https://images.unsplash.com/photo-1509440159596-0249088772ff?w=240&h=180&fit=crop',
-  },
-];
+const formatTanggal = (iso) => {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '';
+  const dua = (n) => String(n).padStart(2, '0');
+  return `${dua(d.getDate())} ${BULAN[d.getMonth()]} ${d.getFullYear()} · ${dua(d.getHours())}:${dua(d.getMinutes())}`;
+};
+
+// Foto bisa hilang kalau produknya sudah dihapus: tampilkan ikon pengganti.
+function FotoPesanan({ uri, styles, theme }) {
+  const [gagal, setGagal] = useState(false);
+  if (!uri || gagal) {
+    return (
+      <View style={[styles.productImage, styles.fotoKosong]}>
+        <Ionicons name="image-outline" size={22} color={theme.textMuted} />
+      </View>
+    );
+  }
+  return <Image source={{ uri }} style={styles.productImage} onError={() => setGagal(true)} />;
+}
 
 export default function MyOrders({ navigation }) {
   const { theme } = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
-  
-  // Menggunakan key bahasa Indonesia untuk state tab ('Berjalan' atau 'Riwayat')
-  const [activeTab, setActiveTab] = useState('Berjalan');
-  const orders = activeTab === 'Berjalan' ? ongoingOrders : previousOrders;
+
+  const [orders, setOrders] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  const muat = useCallback(async () => {
+    try {
+      setError('');
+      setOrders(await ambilRiwayatPesanan());
+    } catch (e) {
+      setError(e?.message || 'Gagal memuat pesanan.');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  // Muat ulang tiap layar ini fokus, jadi pesanan yang baru dibuat langsung muncul.
+  useFocusEffect(useCallback(() => { muat(); }, [muat]));
 
   const goBack = () => {
-    if (navigation.canGoBack()) {
-      navigation.goBack();
-    } else {
-      navigation.navigate('Profile');
-    }
+    if (navigation.canGoBack()) navigation.goBack();
+    else navigation.navigate('Profile');
   };
 
   return (
@@ -94,98 +79,77 @@ export default function MyOrders({ navigation }) {
         <Text style={styles.title}>Pesanan Saya</Text>
       </View>
 
-      <View style={styles.tabs}>
-        {[
-          { key: 'Berjalan', label: 'Berjalan' },
-          { key: 'Riwayat', label: 'Riwayat' },
-        ].map((tab) => {
-          const isActive = activeTab === tab.key;
-          return (
-            <TouchableOpacity
-              key={tab.key}
-              style={[styles.tab, isActive && styles.activeTab]}
-              onPress={() => setActiveTab(tab.key)}
-              activeOpacity={0.8}
-              accessibilityRole="tab"
-              accessibilityState={{ selected: isActive }}
-            >
-              <Text style={[styles.tabText, isActive && styles.activeTabText]}>
-                {tab.label}
-              </Text>
+      <ScrollView contentContainerStyle={styles.orderList} showsVerticalScrollIndicator={false}>
+        {loading ? (
+          <ActivityIndicator size="large" color={theme.primary} style={{ marginTop: 40 }} />
+        ) : error ? (
+          <View style={styles.emptyBox}>
+            <Text style={styles.errorText}>{error}</Text>
+            <TouchableOpacity style={styles.retryBtn} onPress={muat} activeOpacity={0.8}>
+              <Text style={styles.retryText}>Coba lagi</Text>
             </TouchableOpacity>
-          );
-        })}
-      </View>
-
-      <ScrollView
-        contentContainerStyle={styles.orderList}
-        showsVerticalScrollIndicator={false}
-      >
-        <View style={styles.sectionHeading}>
-          <Text style={styles.sectionTitle}>
-            {activeTab === 'Berjalan' ? 'DALAM PROSES' : 'SELESAI & TERKIRIM'}
-          </Text>
-          <Text style={styles.orderCount}>
-            {orders.length} {orders.length === 1 ? 'pesanan' : 'pesanan'}
-          </Text>
-        </View>
-
-        {orders.map((order) => {
-          const isDelivered = order.status === 'Terkirim';
-          return (
-            <View key={order.id} style={styles.orderCard}>
-              <View style={styles.cardMeta}>
-                <Text style={styles.orderDate}>{order.date} · {order.id}</Text>
-                <View
-                  style={[
-                    styles.statusBadge,
-                    !isDelivered && styles.activeStatusBadge,
-                  ]}
-                >
-                  <Text
-                    style={[
-                      styles.statusText,
-                      !isDelivered && styles.activeStatusText,
-                    ]}
-                  >
-                    {order.status}
-                  </Text>
-                </View>
-              </View>
-
-              <View style={styles.productRow}>
-                <Image source={{ uri: order.image }} style={styles.productImage} />
-                <View style={styles.productInfo}>
-                  <Text style={styles.productName}>{order.name}</Text>
-                  <Text style={styles.productDetails}>{order.details}</Text>
-                </View>
-              </View>
-
-              <View style={styles.cardFooter}>
-                <Text style={styles.price}>{order.price}</Text>
-                {!isDelivered && (
-                  <View style={styles.progressLabel}>
-                    <Ionicons name="time-outline" size={14} color={theme.primary} />
-                    <Text style={styles.progressText}>Pesanan sedang diproses</Text>
-                  </View>
-                )}
-              </View>
+          </View>
+        ) : orders.length === 0 ? (
+          <View style={styles.emptyBox}>
+            <Ionicons name="receipt-outline" size={40} color={theme.textMuted} />
+            <Text style={styles.emptyText}>Belum ada pesanan.</Text>
+          </View>
+        ) : (
+          <>
+            <View style={styles.sectionHeading}>
+              <Text style={styles.sectionTitle}>RIWAYAT PEMBELIAN</Text>
+              <Text style={styles.orderCount}>{orders.length} pesanan</Text>
             </View>
-          );
-        })}
+
+            {orders.map((order) => {
+              const pertama = order.items[0];
+              const sisa = order.items.length - 1;
+              const jumlahItem = order.items.reduce((s, i) => s + i.jumlah, 0);
+              return (
+                <View key={order.kunci} style={styles.orderCard}>
+                  <View style={styles.cardMeta}>
+                    <Text style={styles.orderDate}>
+                      {formatTanggal(order.tanggal)}{order.id ? ` · ${order.id}` : ''}
+                    </Text>
+                    <View style={styles.statusBadge}>
+                      <Text style={styles.statusText}>Berhasil</Text>
+                    </View>
+                  </View>
+
+                  <View style={styles.productRow}>
+                    <FotoPesanan uri={pertama.foto} styles={styles} theme={theme} />
+                    <View style={styles.productInfo}>
+                      <Text style={styles.productName} numberOfLines={1}>
+                        {pertama.nama}{sisa > 0 ? ` +${sisa} lainnya` : ''}
+                      </Text>
+                      <Text style={styles.productDetails} numberOfLines={2}>
+                        {order.items.map((i) => `${i.jumlah} × ${i.nama}`).join(' · ')}
+                      </Text>
+                    </View>
+                  </View>
+
+                  {!!order.catatan && (
+                    <Text style={styles.note} numberOfLines={2}>Catatan: {order.catatan}</Text>
+                  )}
+
+                  <View style={styles.cardFooter}>
+                    <Text style={styles.price}>${order.total.toFixed(2)}</Text>
+                    <Text style={styles.itemCount}>{jumlahItem} item</Text>
+                  </View>
+                </View>
+              );
+            })}
+          </>
+        )}
       </ScrollView>
 
-      {/* Komponen BottomNav terpisah (aktif di tab Profil karena halaman Pesanan bagian dari akun) */}
       <BottomNav active="Profile" />
     </SafeAreaView>
   );
 }
 
 const createStyles = (t) => StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: t.background,
-  },
+  safeArea: { flex: 1, backgroundColor: t.background },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -204,58 +168,31 @@ const createStyles = (t) => StyleSheet.create({
     borderRadius: 12,
     backgroundColor: t.surface,
   },
-  title: {
-    color: t.text,
-    fontSize: 21,
-    fontWeight: '700',
-  },
-  tabs: {
-    flexDirection: 'row',
-    marginHorizontal: 20,
-    marginBottom: 18,
-    padding: 4,
-    borderRadius: 11,
-    backgroundColor: t.card,
-  },
-  tab: {
-    flex: 1,
-    minHeight: 36,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 8,
-  },
-  activeTab: {
-    backgroundColor: t.primary,
-  },
-  tabText: {
-    color: t.textMuted,
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  activeTabText: {
-    color: t.onPrimary,
-  },
-  orderList: {
+  title: { color: t.text, fontSize: 21, fontWeight: '700' },
+  orderList: { paddingHorizontal: 20, paddingBottom: 110 },
+
+  emptyBox: { alignItems: 'center', gap: 12, marginTop: 50, paddingHorizontal: 20 },
+  emptyText: { color: t.textMuted, fontSize: 14 },
+  errorText: { color: t.danger || '#D64545', fontSize: 13, textAlign: 'center' },
+  retryBtn: {
     paddingHorizontal: 20,
-    // Memberikan ruang bawah agar konten tidak tertutup oleh BottomNav yang melayang
-    paddingBottom: 110, 
+    paddingVertical: 10,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: t.border,
+    backgroundColor: t.surface,
   },
+  retryText: { color: t.primary, fontSize: 13, fontWeight: '600' },
+
   sectionHeading: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     marginBottom: 10,
   },
-  sectionTitle: {
-    color: t.textMuted,
-    fontSize: 9,
-    fontWeight: '700',
-    letterSpacing: 1.1,
-  },
-  orderCount: {
-    color: t.textMuted,
-    fontSize: 10,
-  },
+  sectionTitle: { color: t.textMuted, fontSize: 9, fontWeight: '700', letterSpacing: 1.1 },
+  orderCount: { color: t.textMuted, fontSize: 10 },
+
   orderCard: {
     marginBottom: 10,
     padding: 10,
@@ -275,71 +212,29 @@ const createStyles = (t) => StyleSheet.create({
     justifyContent: 'space-between',
     marginBottom: 10,
   },
-  orderDate: {
-    color: t.textMuted,
-    fontSize: 9,
-  },
+  orderDate: { flex: 1, color: t.textMuted, fontSize: 10 },
   statusBadge: {
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 10,
     backgroundColor: t.successBg,
   },
-  statusText: {
-    color: t.success,
-    fontSize: 8,
-    fontWeight: '600',
-  },
-  activeStatusBadge: {
-    backgroundColor: t.badgeBg,
-  },
-  activeStatusText: {
-    color: t.primary,
-  },
-  productRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 11,
-  },
-  productImage: {
-    width: 54,
-    height: 54,
-    borderRadius: 10,
-    backgroundColor: t.border,
-  },
-  productInfo: {
-    flex: 1,
-    marginLeft: 10,
-  },
-  productName: {
-    color: t.text,
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  productDetails: {
-    marginTop: 3,
-    color: t.textMuted,
-    fontSize: 9,
-  },
+  statusText: { color: t.success, fontSize: 9, fontWeight: '600' },
+
+  productRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 11 },
+  productImage: { width: 54, height: 54, borderRadius: 10, backgroundColor: t.border },
+  fotoKosong: { alignItems: 'center', justifyContent: 'center' },
+  productInfo: { flex: 1, marginLeft: 10 },
+  productName: { color: t.text, fontSize: 13, fontWeight: '700' },
+  productDetails: { marginTop: 3, color: t.textMuted, fontSize: 10 },
+  note: { color: t.textMuted, fontSize: 10, fontStyle: 'italic', marginBottom: 8 },
+
   cardFooter: {
     minHeight: 25,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-  price: {
-    color: t.text,
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  progressLabel: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  progressText: {
-    color: t.primary,
-    fontSize: 9,
-    fontWeight: '600',
-  },
+  price: { color: t.text, fontSize: 13, fontWeight: '700' },
+  itemCount: { color: t.textMuted, fontSize: 10 },
 });
