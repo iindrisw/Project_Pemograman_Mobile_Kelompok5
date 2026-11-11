@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "kelompok_5ci",
-    "slug": "kelompok_5ci",
+    "name": "Chikara Bakery",
+    "slug": "Chikara Bakery",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "kelompok5ci",
+    "scheme": "chikarabakery",
     "userInterfaceStyle": "automatic",
     "ios": {
       "icon": "./assets/expo.icon"
@@ -20,11 +20,10 @@
       "predictiveBackGestureEnabled": false
     },
     "web": {
-      "output": "static",
+      "output": "single",
       "favicon": "./assets/images/favicon.png"
     },
     "plugins": [
-      "expo-router",
       [
         "expo-splash-screen",
         {
@@ -32,11 +31,8 @@
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 76
         }
-      ]
-    ],
-    "experiments": {
-      "typedRoutes": true,
-      "reactCompiler": true
-    }
+      ],
+      "expo-web-browser"
+    ]
   }
 }
