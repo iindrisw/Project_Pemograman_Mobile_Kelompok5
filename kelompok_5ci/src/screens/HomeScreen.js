@@ -264,13 +264,21 @@ export default function HomeScreen({ navigation }) {
           contentContainerStyle={styles.horizontalList}
           ItemSeparatorComponent={() => <View style={{ width: 14 }} />}
           renderItem={({ item }) => (
-            <ProductCard
-              image={item.image}
-              name={item.name}
-              price={item.price}
-              onAddToCart={() => handleAdd(item)}
+            <TouchableOpacity
+              activeOpacity={0.9}
               style={{ width: 180 }}
-            />
+              onPress={() => navigation.navigate('ProductDetail', { item })}
+              accessibilityRole="button"
+              accessibilityLabel={`${item.name}, ${item.price}. Lihat detail`}
+            >
+              <ProductCard
+                image={item.image}
+                name={item.name}
+                price={item.price}
+                onAddToCart={() => handleAdd(item)}
+                style={{ width: '100%' }}
+              />
+            </TouchableOpacity>
           )}
         />
       ) : (
