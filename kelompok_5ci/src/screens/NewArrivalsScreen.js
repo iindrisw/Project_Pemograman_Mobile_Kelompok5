@@ -11,6 +11,7 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../theme/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
+import { SearchMenuControls, useMenuSearch } from '../search menu';
 
 /* Dipakai kalau layar ini dibuka tanpa data dari HomeScreen */
 const IMG_SOURDOUGH = 'https://images.unsplash.com/photo-1589367920969-ab8e050bbb04?w=500';
@@ -19,10 +20,10 @@ const IMG_BREAD = 'https://images.unsplash.com/photo-1509440159596-0249088772ff?
 const IMG_TART = 'https://images.unsplash.com/photo-1519915028121-7d3463d20b13?w=500';
 
 const fallbackItems = [
-  { id: '1', name: 'Classic Sourdough', price: 'Rp 65.000', image: IMG_SOURDOUGH },
-  { id: '2', name: 'Classic Butter Croissant', price: 'Rp 35.000', image: IMG_CROISSANT },
-  { id: '3', name: 'Cinnamon Swirl', price: 'Rp 42.500', image: IMG_BREAD },
-  { id: '4', name: 'Strawberry Tart', price: 'Rp 57.500', image: IMG_TART },
+  { id: '1', name: 'Classic Sourdough', price: 'Rp 65.000', image: IMG_SOURDOUGH, category: 'Bread', stok: 0 },
+  { id: '2', name: 'Classic Butter Croissant', price: 'Rp 35.000', image: IMG_CROISSANT, category: 'Pastries', stok: 0 },
+  { id: '3', name: 'Cinnamon Swirl', price: 'Rp 42.500', image: IMG_BREAD, category: 'Pastries', stok: 0 },
+  { id: '4', name: 'Strawberry Tart', price: 'Rp 57.500', image: IMG_TART, category: 'Cakes', stok: 0 },
 ];
 
 /* ------------------------------- Kartu produk ------------------------------- */
@@ -65,6 +66,15 @@ export default function NewArrivalsScreen({ navigation, route }) {
   const insets = useSafeAreaInsets();
 
   const items = route?.params?.items?.length ? route.params.items : fallbackItems;
+  const {
+    query,
+    setQuery,
+    criteria,
+    setCriteria,
+    filteredProducts,
+    ensureOrderedProducts,
+    activeFilterCount,
+  } = useMenuSearch(items);
 
   const H_PADDING = 24;
   const GAP = 12;
@@ -80,20 +90,22 @@ export default function NewArrivalsScreen({ navigation, route }) {
       {/* Judul + search + filter */}
       <View style={styles.header}>
         <Text style={styles.title}>New Arrivals</Text>
-        <View style={styles.headerActions}>
-          <TouchableOpacity style={styles.searchBtn} activeOpacity={0.7}>
-            <Ionicons name="search-outline" size={26} color={theme.primary} />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.filterBtn} activeOpacity={0.7}>
-            <Ionicons name="options-outline" size={22} color={theme.primary} />
-          </TouchableOpacity>
-        </View>
       </View>
+
+      <SearchMenuControls
+        theme={theme}
+        query={query}
+        onQueryChange={setQuery}
+        criteria={criteria}
+        onCriteriaChange={setCriteria}
+        onEnsureOrderedProducts={ensureOrderedProducts}
+        activeFilterCount={activeFilterCount}
+      />
 
       {/* Sub judul */}
       <View style={styles.subHeader}>
         <Text style={styles.subTitle}>Fresh from the oven</Text>
-        <Text style={styles.count}>{items.length} items</Text>
+        <Text style={styles.count}>{filteredProducts.length} items</Text>
       </View>
     </View>
   );
@@ -101,10 +113,15 @@ export default function NewArrivalsScreen({ navigation, route }) {
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
       <FlatList
-        data={items}
+        data={filteredProducts}
         keyExtractor={(item) => item.id}
         numColumns={2}
-        ListHeaderComponent={renderHeader}
+        ListHeaderComponent={renderHeader()}
+        ListEmptyComponent={
+          <Text style={styles.emptyText}>
+            Tidak ada produk yang sesuai dengan pencarian atau kriteria.
+          </Text>
+        }
         showsVerticalScrollIndicator={false}
         columnWrapperStyle={{
           paddingHorizontal: H_PADDING,
@@ -133,6 +150,7 @@ export default function NewArrivalsScreen({ navigation, route }) {
 /* ----------------------------------- Styles ----------------------------------- */
 const createStyles = (t) => StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: t.background },
+  emptyText: { marginTop: 32, paddingHorizontal: 24, textAlign: 'center', color: t.textMuted },
 
   header: {
     flexDirection: 'row',
@@ -143,19 +161,6 @@ const createStyles = (t) => StyleSheet.create({
     paddingBottom: 8,
   },
   title: { fontSize: 28, fontWeight: 'bold', color: t.text },
-  headerActions: { flexDirection: 'row', alignItems: 'center', gap: 14 },
-  searchBtn: { padding: 4 },
-  filterBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 14,
-    backgroundColor: t.surface,
-    borderWidth: 1,
-    borderColor: t.border,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-
   subHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',

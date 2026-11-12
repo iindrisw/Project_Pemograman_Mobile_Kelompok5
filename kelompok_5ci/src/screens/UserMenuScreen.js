@@ -16,9 +16,10 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useTheme } from '../theme/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
 import { useCart } from '../context/CartContext';
-import { ambilSemuaProduk, KATEGORI } from '../lib/produk';
+import { ambilSemuaProduk } from '../lib/produk';
+import { SearchMenuControls, SEARCH_CATEGORIES, useMenuSearch } from '../search menu';
 
-const CATEGORIES = ['All', ...KATEGORI];
+const CATEGORIES = ['All', ...SEARCH_CATEGORIES];
 
 // Kartu produk bersih khusus user (tanpa fitur edit/hapus admin)
 function UserGridCard({ item, width, onAdd, onPress }) {
@@ -55,9 +56,17 @@ export default function UserMenuScreen({ navigation }) {
   const { width } = useWindowDimensions();
   const insets = useSafeAreaInsets();
 
-  const [selectedCategory, setSelectedCategory] = useState('All');
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
+  const {
+    query,
+    setQuery,
+    criteria,
+    setCriteria,
+    filteredProducts,
+    ensureOrderedProducts,
+    activeFilterCount,
+  } = useMenuSearch(items);
 
   // Ambil data produk real-time dari Supabase
   useFocusEffect(
@@ -80,10 +89,6 @@ export default function UserMenuScreen({ navigation }) {
   const { addToCart, cartItems } = useCart();
   const cartCount = cartItems.reduce((sum, i) => sum + i.quantity, 0);
 
-  const filteredProducts = selectedCategory === 'All'
-    ? items
-    : items.filter(item => item.category === selectedCategory);
-
   const H_PADDING = 24;
   const GAP = 12;
   const cardWidth = (width - H_PADDING * 2 - GAP) / 2;
@@ -102,9 +107,6 @@ export default function UserMenuScreen({ navigation }) {
       <View style={styles.header}>
         <Text style={styles.title}>Menu Pilihan</Text>
         <View style={styles.headerActions}>
-          <TouchableOpacity style={styles.actionBtn} activeOpacity={0.7}>
-            <Ionicons name="search-outline" size={24} color={theme.primary} />
-          </TouchableOpacity>
           <TouchableOpacity 
             style={styles.actionBtn} 
             activeOpacity={0.7}
@@ -121,6 +123,16 @@ export default function UserMenuScreen({ navigation }) {
         </View>
       </View>
 
+      <SearchMenuControls
+        theme={theme}
+        query={query}
+        onQueryChange={setQuery}
+        criteria={criteria}
+        onCriteriaChange={setCriteria}
+        onEnsureOrderedProducts={ensureOrderedProducts}
+        activeFilterCount={activeFilterCount}
+      />
+
       {/* Filter Kategori */}
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.categoryContainer}>
         {CATEGORIES.map((cat, index) => (
@@ -128,14 +140,14 @@ export default function UserMenuScreen({ navigation }) {
             key={index}
             style={[
               styles.categoryButton,
-              selectedCategory === cat && styles.categoryButtonActive
+              criteria.category === cat && styles.categoryButtonActive
             ]}
-            onPress={() => setSelectedCategory(cat)}
+            onPress={() => setCriteria((current) => ({ ...current, category: cat }))}
             activeOpacity={0.8}
           >
             <Text style={[
               styles.categoryText,
-              selectedCategory === cat && styles.categoryTextActive
+              criteria.category === cat && styles.categoryTextActive
             ]}>
               {cat}
             </Text>
@@ -156,12 +168,16 @@ export default function UserMenuScreen({ navigation }) {
         data={filteredProducts}
         keyExtractor={(item) => item.id}
         numColumns={2}
-        ListHeaderComponent={renderHeader}
+        ListHeaderComponent={renderHeader()}
         ListEmptyComponent={
           loading ? (
             <ActivityIndicator size="large" color={theme.primary} style={{ marginTop: 40 }} />
           ) : (
-            <Text style={styles.emptyText}>Belum ada produk yang tersedia.</Text>
+            <Text style={styles.emptyText}>
+              {items.length > 0
+                ? 'Tidak ada produk yang sesuai dengan pencarian atau kriteria.'
+                : 'Belum ada produk yang tersedia.'}
+            </Text>
           )
         }
         showsVerticalScrollIndicator={false}

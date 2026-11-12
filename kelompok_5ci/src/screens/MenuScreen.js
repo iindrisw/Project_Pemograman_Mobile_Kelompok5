@@ -16,10 +16,11 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useTheme } from '../theme/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
 import { useCart } from '../context/CartContext';
-import { ambilSemuaProduk, KATEGORI } from '../lib/produk';
+import { ambilSemuaProduk } from '../lib/produk';
 import { useProfil } from '../lib/auth';
+import { SearchMenuControls, SEARCH_CATEGORIES, useMenuSearch } from '../search menu';
 
-const CATEGORIES = ['All', ...KATEGORI];
+const CATEGORIES = ['All', ...SEARCH_CATEGORIES];
 
 // Samakan "Pastries" / "Pastry", "Cakes" / "Cake" supaya kategori dari Home cocok.
 const norm = (s) => String(s || '').toLowerCase().trim().replace(/ies$/, 'y').replace(/s$/, '');
@@ -61,20 +62,27 @@ export default function MenuScreen({ navigation, route }) {
   const insets = useSafeAreaInsets();
   const { isAdmin } = useProfil(); // tombol tambah produk hanya untuk admin
 
-  const [selectedCategory, setSelectedCategory] = useState('All');
+  const [items, setItems] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const {
+    query,
+    setQuery,
+    criteria,
+    setCriteria,
+    filteredProducts,
+    ensureOrderedProducts,
+    activeFilterCount,
+  } = useMenuSearch(items);
 
   // Dari Home: ketuk Bread / Pastries / Cakes -> Menu langsung terfilter kategori itu.
   useEffect(() => {
     const k = route?.params?.kategori;
     if (!k) return;
     const cocok = CATEGORIES.find((c) => norm(c) === norm(k));
-    setSelectedCategory(cocok || 'All');
-  }, [route?.params?.kategori, route?.params?.nonce]);
+    setCriteria((current) => ({ ...current, category: cocok || 'All' }));
+  }, [route?.params?.kategori, route?.params?.nonce, setCriteria]);
 
   // Data produk dari Supabase (tabel products), diurutkan dari yang terbaru.
-  const [items, setItems] = useState([]);
-  const [loading, setLoading] = useState(true);
-
   // useFocusEffect (bukan useEffect): muat ulang SETIAP kali Menu kembali fokus,
   // jadi produk yang baru ditambah/diubah/dihapus langsung terlihat.
   useFocusEffect(
@@ -97,11 +105,6 @@ export default function MenuScreen({ navigation, route }) {
   // Logika Cart global
   const { addToCart } = useCart();
 
-  // Logika Filter kategori
-  const filteredProducts = selectedCategory === 'All'
-    ? items
-    : items.filter(item => item.category === selectedCategory);
-
   const H_PADDING = 24;
   const GAP = 12;
   const cardWidth = (width - H_PADDING * 2 - GAP) / 2;
@@ -115,7 +118,7 @@ export default function MenuScreen({ navigation, route }) {
 
   const renderHeader = () => (
     <View>
-      {/* Header dengan Title dan Aksi Kanan (Search, Filter, dan Cart disatukan) */}
+      {/* Header dengan Title dan Aksi */}
       <View style={styles.header}>
         <Text style={styles.title}>Menu</Text>
         <View style={styles.headerActions}>
@@ -130,12 +133,6 @@ export default function MenuScreen({ navigation, route }) {
               <Ionicons name="add" size={26} color={theme.primary} />
             </TouchableOpacity>
           )}
-          <TouchableOpacity style={styles.actionBtn} activeOpacity={0.7}>
-            <Ionicons name="search-outline" size={24} color={theme.primary} />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.actionBtn} activeOpacity={0.7}>
-            <Ionicons name="options-outline" size={22} color={theme.primary} />
-          </TouchableOpacity>
           <TouchableOpacity 
             style={styles.actionBtn} 
             activeOpacity={0.7}
@@ -146,6 +143,16 @@ export default function MenuScreen({ navigation, route }) {
         </View>
       </View>
 
+      <SearchMenuControls
+        theme={theme}
+        query={query}
+        onQueryChange={setQuery}
+        criteria={criteria}
+        onCriteriaChange={setCriteria}
+        onEnsureOrderedProducts={ensureOrderedProducts}
+        activeFilterCount={activeFilterCount}
+      />
+
       {/* Kategori horizontal */}
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.categoryContainer}>
         {CATEGORIES.map((cat, index) => (
@@ -153,14 +160,14 @@ export default function MenuScreen({ navigation, route }) {
             key={index}
             style={[
               styles.categoryButton,
-              selectedCategory === cat && styles.categoryButtonActive
+              criteria.category === cat && styles.categoryButtonActive
             ]}
-            onPress={() => setSelectedCategory(cat)}
+            onPress={() => setCriteria((current) => ({ ...current, category: cat }))}
             activeOpacity={0.8}
           >
             <Text style={[
               styles.categoryText,
-              selectedCategory === cat && styles.categoryTextActive
+              criteria.category === cat && styles.categoryTextActive
             ]}>
               {cat}
             </Text>
@@ -181,13 +188,15 @@ export default function MenuScreen({ navigation, route }) {
         data={filteredProducts}
         keyExtractor={(item) => item.id}
         numColumns={2}
-        ListHeaderComponent={renderHeader}
+        ListHeaderComponent={renderHeader()}
         ListEmptyComponent={
           loading ? (
             <ActivityIndicator size="large" color={theme.primary} style={{ marginTop: 40 }} />
           ) : (
             <Text style={styles.emptyText}>
-              {isAdmin ? 'Belum ada produk. Ketuk + untuk menambah.' : 'Belum ada produk yang tersedia.'}
+              {items.length > 0
+                ? 'Tidak ada produk yang sesuai dengan pencarian atau kriteria.'
+                : isAdmin ? 'Belum ada produk. Ketuk + untuk menambah.' : 'Belum ada produk yang tersedia.'}
             </Text>
           )
         }
