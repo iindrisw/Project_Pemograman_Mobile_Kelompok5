@@ -11,6 +11,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTheme } from '../theme/ThemeContext';
 import FadeInView from '../components/FadeInView';
+import { formatRupiah } from '../lib/saldo';
 
 // Nomor pesanan sementara; ganti dengan ID dari backend kalau sudah ada
 const makeOrderId = () => `#DC-${Math.floor(10000 + Math.random() * 90000)}`;
@@ -22,7 +23,8 @@ export default function CheckoutSuccessScreen({ navigation, route }) {
 
   // Data pesanan dikirim dari CartScreen lewat route params
   const orderId = useMemo(() => route?.params?.orderId || makeOrderId(), [route?.params?.orderId]);
-  const totalAmount = route?.params?.totalAmount || '$0.00';
+  const totalAmount = route?.params?.totalAmount || 'Rp 0';
+  const saldoSisa = route?.params?.saldoSisa;
 
   const goHome = () => navigation.navigate('Home');
 
@@ -40,6 +42,7 @@ export default function CheckoutSuccessScreen({ navigation, route }) {
     { label: 'Order ID', value: orderId },
     { label: 'Payment status', value: 'Paid', success: true },
     { label: 'Total amount', value: totalAmount },
+    ...(saldoSisa != null ? [{ label: 'Remaining balance', value: formatRupiah(saldoSisa) }] : []),
     { label: 'Estimated pickup', value: '15 – 20 minutes' },
   ];
 

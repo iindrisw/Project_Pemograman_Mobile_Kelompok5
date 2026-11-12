@@ -9,11 +9,21 @@ export const BUCKET = 'produk';
 
 export const KATEGORI = ['Bread', 'Pastries', 'Cakes', 'Drinks', 'Other'];
 
-// Harga di aplikasi ini ditampilkan dalam dolar ($), sama seperti Cart.
-export const formatHarga = (n) => `$${Number(n).toFixed(2)}`;
+// Harga ditampilkan dalam rupiah: 25000 -> "Rp 25.000"
+export const formatHarga = (n) =>
+  `Rp ${Math.round(Number(n) || 0).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.')}`;
+
+// Kebalikannya: "Rp 25.000" -> 25000 (juga paham format lama "$6.50")
+export const parseHarga = (p) => {
+  if (typeof p === 'number') return p;
+  const s = String(p ?? '');
+  if (/rp/i.test(s)) return Number(s.replace(/[^0-9]/g, '')) || 0;
+  const n = parseFloat(s.replace(/[^0-9.]/g, ''));
+  return Number.isFinite(n) ? n : 0;
+};
 
 // Baris Supabase -> bentuk item yang dipakai screen (Menu, Detail, Cart).
-// price tetap berupa string '$6.50' supaya CartContext yang sudah ada tidak berubah.
+// price tetap berupa string 'Rp 25.000' supaya CartContext yang sudah ada tidak berubah.
 export const keItem = (row) => ({
   id: row.id,
   name: row.nama,

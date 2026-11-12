@@ -13,13 +13,9 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useTheme } from '../theme/ThemeContext';
 import { useCart } from '../context/CartContext';
 import { supabase } from '../lib/supabase';
-import { ambilProduk } from '../lib/produk';
+import { ambilProduk, parseHarga } from '../lib/produk';
+import { formatRupiah } from '../lib/saldo';
 import { useProfil } from '../lib/auth';
-
-const parsePrice = (price) => {
-  const n = parseFloat(String(price).replace(/[^0-9.]/g, ''));
-  return Number.isFinite(n) ? n : 0;
-};
 
 export default function ProductDetailScreen({ navigation, route }) {
   const { theme } = useTheme();
@@ -68,7 +64,7 @@ export default function ProductDetailScreen({ navigation, route }) {
 
   const stok = item.stok ?? 0;
   const habis = stok <= 0;
-  const unitPrice = parsePrice(item.price);
+  const unitPrice = parseHarga(item.price);
   const total = unitPrice * qty;
   const cartCount = cartItems.reduce((sum, i) => sum + i.quantity, 0);
 
@@ -201,7 +197,7 @@ export default function ProductDetailScreen({ navigation, route }) {
         >
           <Ionicons name={added ? 'checkmark' : 'bag-add-outline'} size={20} color={theme.onPrimary} />
           <Text style={styles.addButtonText}>
-            {habis ? 'Stok habis' : added ? 'Added to cart' : `Add to cart · $${total.toFixed(2)}`}
+            {habis ? 'Stok habis' : added ? 'Added to cart' : `Add to cart · ${formatRupiah(total)}`}
           </Text>
         </TouchableOpacity>
       </View>

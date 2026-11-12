@@ -18,14 +18,14 @@ import { useProfil } from '../lib/auth';
 // Nama route tiap menu (harus sama dengan name di Stack.Screen pada App.js)
 const routeByLabel = {
   'My Orders': 'MyOrders',
-  'Payment Methods': 'Payments',
+  'Saldo & Pembayaran': 'Payments',
   'Settings': 'Settings',
   'Help & Support': 'Support',
 };
 
 const profileOptions = [
   { label: 'My Orders', icon: 'bag-handle-outline' },
-  { label: 'Payment Methods', icon: 'card-outline' },
+  { label: 'Saldo & Pembayaran', icon: 'wallet-outline' },
   { label: 'Settings', icon: 'settings-outline' },
   { label: 'Help & Support', icon: 'help-circle-outline' },
 ];

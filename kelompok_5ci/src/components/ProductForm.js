@@ -131,8 +131,8 @@ export default function ProductForm({ initial = {}, fotoWajib, submitLabel, onSu
         />
 
         <Field
-          label="Harga (USD)"
-          placeholder="mis. 3.50"
+          label="Harga (Rp)"
+          placeholder="mis. 15000"
           keyboardType="decimal-pad"
           value={harga}
           onChangeText={setHarga}

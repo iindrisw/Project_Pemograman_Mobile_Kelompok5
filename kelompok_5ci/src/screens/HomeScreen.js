@@ -49,7 +49,7 @@ const heroSlides = [
     id: 'h3',
     icon: 'bicycle-outline',
     tag: 'FREE DELIVERY',
-    title: 'Free delivery on orders over $20.',
+    title: 'Free delivery on orders over Rp 100.000.',
     image: IMG_TART,
   },
 ];

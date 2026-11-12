@@ -2,8 +2,13 @@ import React, { createContext, useContext, useState, useCallback, useMemo } from
 
 const CartContext = createContext(null);
 
-const parsePrice = (p) =>
-  typeof p === 'string' ? parseFloat(p.replace('$', '')) : p;
+// Paham "Rp 25.000" (titik = pemisah ribuan) dan format lama "$6.50"
+const parsePrice = (p) => {
+  if (typeof p === 'number') return p;
+  const s = String(p ?? '');
+  if (/rp/i.test(s)) return Number(s.replace(/[^0-9]/g, '')) || 0;
+  return parseFloat(s.replace('$', '')) || 0;
+};
 
 export function CartProvider({ children }) {
   // Diset kosong ([]) agar keranjang tidak ada isi default-nya

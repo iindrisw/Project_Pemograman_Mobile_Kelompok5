@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import {
   StyleSheet,
   Text,
@@ -9,12 +9,14 @@ import {
   TextInput,
   ActivityIndicator,
 } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons, Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useCart } from '../context/CartContext';
 import { useTheme } from '../theme/ThemeContext';
 import BottomNav from '../components/BottomNav'; // Import BottomNav terpisah
-import { catatPenjualan, buatNomorPesanan } from '../lib/penjualan';
+import { buatPesanan } from '../lib/penjualan';
+import { ambilSaldo, formatRupiah } from '../lib/saldo';
 
 export default function CartScreen({ navigation }) {
   const { theme } = useTheme();
@@ -28,23 +30,39 @@ export default function CartScreen({ navigation }) {
   const [memproses, setMemproses] = useState(false);
   const [errorCheckout, setErrorCheckout] = useState('');
 
-  // Simpan pesanan ke database, kosongkan keranjang, lalu tampilkan layar sukses.
-  // Keranjang HANYA dikosongkan kalau penyimpanan berhasil.
+  // Saldo diambil ulang tiap layar ini fokus (mis. setelah isi saldo)
+  const [saldo, setSaldo] = useState(null);
+  useFocusEffect(
+    useCallback(() => {
+      let aktif = true;
+      ambilSaldo()
+        .then((s) => { if (aktif) setSaldo(s); })
+        .catch(() => {}); // gagal memuat: server tetap memvalidasi saat checkout
+      return () => { aktif = false; };
+    }, []),
+  );
+  const saldoKurang = saldo !== null && saldo < subtotal;
+
+  // Checkout: server mengecek stok + saldo, memotong saldo, dan mencatat pesanan sekaligus.
+  // Keranjang HANYA dikosongkan kalau semuanya berhasil.
   const handleCheckout = async () => {
-    if (isEmpty || memproses) return;
+    if (isEmpty || memproses || saldoKurang) return;
     setErrorCheckout('');
     setMemproses(true);
     try {
-      const nomorPesanan = buatNomorPesanan();
-      const total = `$${subtotal.toFixed(2)}`;
-      await catatPenjualan(cartItems, { nomorPesanan, catatan: orderNotes });
+      const hasil = await buatPesanan(cartItems, orderNotes);
       clearCart();
-      navigation.navigate('CheckoutSuccess', { orderId: nomorPesanan, totalAmount: total });
+      navigation.navigate('CheckoutSuccess', {
+        orderId: hasil.nomorPesanan,
+        totalAmount: formatRupiah(hasil.total),
+        saldoSisa: hasil.saldo,
+      });
     } catch (e) {
+      const pesan = e?.message || '';
       setErrorCheckout(
-        /row-level security|jwt|not authenticated/i.test(e?.message || '')
-          ? 'Silakan login dulu untuk memesan.'
-          : e?.message || 'Gagal menyimpan pesanan. Coba lagi.',
+        /could not find the function|PGRST202/i.test(pesan)
+          ? 'Fitur pembayaran belum aktif. Jalankan 06_pembayaran.sql di Supabase.'
+          : pesan || 'Gagal memproses pesanan. Coba lagi.',
       );
     } finally {
       setMemproses(false);
@@ -89,7 +107,7 @@ export default function CartScreen({ navigation }) {
 
               <View style={styles.itemDetails}>
                 <Text style={styles.itemName} numberOfLines={1}>{item.name}</Text>
-                <Text style={styles.itemUnitPrice}>${item.price.toFixed(2)} / item</Text>
+                <Text style={styles.itemUnitPrice}>{formatRupiah(item.price)} / item</Text>
 
                 {/* Kontrol Jumlah / Kuantitas */}
                 <View style={styles.qtyContainer}>
@@ -104,7 +122,7 @@ export default function CartScreen({ navigation }) {
               </View>
 
               <Text style={styles.itemTotalPrice}>
-                ${(item.price * item.quantity).toFixed(2)}
+                {formatRupiah(item.price * item.quantity)}
               </Text>
             </View>
           ))
@@ -143,7 +161,7 @@ export default function CartScreen({ navigation }) {
 
           <View style={styles.summaryRow}>
             <Text style={styles.summaryTextLabel}>Subtotal</Text>
-            <Text style={styles.summaryTextValue}>${subtotal.toFixed(2)}</Text>
+            <Text style={styles.summaryTextValue}>{formatRupiah(subtotal)}</Text>
           </View>
 
           <View style={styles.summaryRow}>
@@ -155,8 +173,30 @@ export default function CartScreen({ navigation }) {
 
           <View style={styles.summaryRow}>
             <Text style={styles.totalTextLabel}>Total</Text>
-            <Text style={styles.totalTextValue}>${subtotal.toFixed(2)}</Text>
+            <Text style={styles.totalTextValue}>{formatRupiah(subtotal)}</Text>
           </View>
+
+          <View style={styles.divider} />
+
+          <View style={styles.summaryRow}>
+            <Text style={styles.summaryTextLabel}>Saldo kamu</Text>
+            <Text style={[styles.summaryTextValue, saldoKurang && { color: theme.danger || '#D64545' }]}>
+              {saldo === null ? '…' : formatRupiah(saldo)}
+            </Text>
+          </View>
+
+          {saldoKurang && (
+            <TouchableOpacity
+              style={styles.topUpLink}
+              onPress={() => navigation.navigate('AddPayment')}
+              activeOpacity={0.8}
+              accessibilityRole="button"
+            >
+              <Text style={styles.topUpText}>
+                Saldo kurang {formatRupiah(subtotal - saldo)}. Ketuk untuk isi saldo
+              </Text>
+            </TouchableOpacity>
+          )}
         </View>
       </ScrollView>
 
@@ -164,12 +204,12 @@ export default function CartScreen({ navigation }) {
       <View style={[styles.footer, { bottom: 70, paddingBottom: 12 }]}>
         {!!errorCheckout && <Text style={styles.checkoutError}>{errorCheckout}</Text>}
         <TouchableOpacity
-          style={[styles.checkoutButton, (isEmpty || memproses) && styles.checkoutButtonDisabled]}
-          disabled={isEmpty || memproses}
+          style={[styles.checkoutButton, (isEmpty || memproses || saldoKurang) && styles.checkoutButtonDisabled]}
+          disabled={isEmpty || memproses || saldoKurang}
           onPress={handleCheckout}
           activeOpacity={0.85}
           accessibilityRole="button"
-          accessibilityState={{ disabled: isEmpty || memproses, busy: memproses }}
+          accessibilityState={{ disabled: isEmpty || memproses || saldoKurang, busy: memproses }}
         >
           {memproses ? (
             <ActivityIndicator color={theme.onPrimary} />
@@ -293,6 +333,8 @@ const createStyles = (t) =>
     },
     checkoutButton: { backgroundColor: t.primary, borderRadius: 16, paddingVertical: 16, alignItems: 'center' },
     checkoutButtonDisabled: { opacity: 0.45 },
+    topUpLink: { marginTop: 4, paddingVertical: 6 },
+    topUpText: { color: t.primary, fontSize: 13, fontWeight: '600' },
     checkoutError: { color: t.danger || '#D64545', fontSize: 12, textAlign: 'center', marginBottom: 8 },
     checkoutButtonText: { color: t.onPrimary, fontSize: 16, fontWeight: 'bold' },
   });

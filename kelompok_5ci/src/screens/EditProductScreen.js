@@ -7,7 +7,7 @@ import ScreenHeader from '../components/ScreenHeader';
 import ProductForm from '../components/ProductForm';
 import ProductResultModal from '../components/ProductResultModal'; // 👈 Import modal hasil yang sama
 import { supabase } from '../lib/supabase';
-import { uploadFoto, hapusFoto } from '../lib/produk';
+import { uploadFoto, hapusFoto, parseHarga } from '../lib/produk';
 import { useProfil } from '../lib/auth';
 
 export default function EditProductScreen({ route, navigation }) {
@@ -31,7 +31,7 @@ export default function EditProductScreen({ route, navigation }) {
 
   const initial = {
     nama: item.name,
-    harga: String(parseFloat(String(item.price).replace(/[^0-9.]/g, ''))),
+    harga: String(parseHarga(item.price)),
     deskripsi: item.description || '',
     kategori: item.category,
     stok: String(item.stok ?? 0),

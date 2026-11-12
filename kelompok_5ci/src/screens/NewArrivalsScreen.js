@@ -19,10 +19,10 @@ const IMG_BREAD = 'https://images.unsplash.com/photo-1509440159596-0249088772ff?
 const IMG_TART = 'https://images.unsplash.com/photo-1519915028121-7d3463d20b13?w=500';
 
 const fallbackItems = [
-  { id: '1', name: 'Classic Sourdough', price: '$6.50', image: IMG_SOURDOUGH },
-  { id: '2', name: 'Classic Butter Croissant', price: '$3.50', image: IMG_CROISSANT },
-  { id: '3', name: 'Cinnamon Swirl', price: '$4.25', image: IMG_BREAD },
-  { id: '4', name: 'Strawberry Tart', price: '$5.75', image: IMG_TART },
+  { id: '1', name: 'Classic Sourdough', price: 'Rp 65.000', image: IMG_SOURDOUGH },
+  { id: '2', name: 'Classic Butter Croissant', price: 'Rp 35.000', image: IMG_CROISSANT },
+  { id: '3', name: 'Cinnamon Swirl', price: 'Rp 42.500', image: IMG_BREAD },
+  { id: '4', name: 'Strawberry Tart', price: 'Rp 57.500', image: IMG_TART },
 ];
 
 /* ------------------------------- Kartu produk ------------------------------- */

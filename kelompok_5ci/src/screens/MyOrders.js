@@ -14,6 +14,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../theme/ThemeContext';
 import BottomNav from '../components/BottomNav';
 import { ambilRiwayatPesanan } from '../lib/penjualan';
+import { formatRupiah } from '../lib/saldo';
 
 const BULAN = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
 
@@ -133,7 +134,7 @@ export default function MyOrders({ navigation }) {
                   )}
 
                   <View style={styles.cardFooter}>
-                    <Text style={styles.price}>${order.total.toFixed(2)}</Text>
+                    <Text style={styles.price}>{formatRupiah(order.total)}</Text>
                     <Text style={styles.itemCount}>{jumlahItem} item</Text>
                   </View>
                 </View>

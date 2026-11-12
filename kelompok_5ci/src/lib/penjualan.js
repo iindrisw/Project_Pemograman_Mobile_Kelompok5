@@ -1,32 +1,30 @@
 import { supabase } from './supabase';
 
-// Nomor pesanan unik, mis. #DC-K3F9ZA
-export const buatNomorPesanan = () =>
-  `#DC-${Date.now().toString(36).slice(-4)}${Math.random().toString(36).slice(2, 4)}`.toUpperCase();
-
 /*
-  Simpan pesanan ke tabel "penjualan" (1 baris per produk di keranjang).
-  Nama, harga, dan foto DISALIN ke sini, jadi riwayat tidak berubah walau
-  produknya nanti diedit atau dihapus.
-  Panggil SEKALI saat checkout, hanya kalau berhasil:
-    await catatPenjualan(cartItems, { nomorPesanan, catatan });
+  Checkout: SATU panggilan ke database yang melakukan semuanya sekaligus (atomik):
+    - harga dihitung ulang oleh server dari tabel produk (bukan dari aplikasi)
+    - stok dicek lalu dikurangi
+    - saldo dicek lalu dipotong
+    - pesanan dicatat
+  Kalau salah satu gagal (stok kurang / saldo kurang), TIDAK ada yang berubah.
+  Mengembalikan { nomorPesanan, total, saldo } (saldo = sisa saldo).
 */
-export async function catatPenjualan(cartItems, { nomorPesanan, catatan } = {}) {
-  const baris = (cartItems || [])
+export async function buatPesanan(cartItems, catatan) {
+  const items = (cartItems || [])
     .filter((i) => i && i.id != null && i.quantity > 0)
-    .map((i) => ({
-      product_id: String(i.id),
-      jumlah: i.quantity,
-      nomor_pesanan: nomorPesanan || null,
-      nama: i.name,
-      harga: i.price,
-      foto_url: i.image || null,
-      catatan: (catatan || '').trim() || null,
-    }));
-  if (baris.length === 0) return;
+    .map((i) => ({ id: String(i.id), jumlah: i.quantity }));
+  if (items.length === 0) throw new Error('Keranjang kosong.');
 
-  const { error } = await supabase.from('penjualan').insert(baris);
+  const { data, error } = await supabase.rpc('buat_pesanan', {
+    p_items: items,
+    p_catatan: (catatan || '').trim() || null,
+  });
   if (error) throw error;
+  return {
+    nomorPesanan: data.nomor_pesanan,
+    total: Number(data.total),
+    saldo: Number(data.saldo),
+  };
 }
 
 /*

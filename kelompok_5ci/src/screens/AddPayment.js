@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -14,85 +14,66 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useTheme } from '../theme/ThemeContext';
 import FadeInView from '../components/FadeInView';
 import ScreenHeader from '../components/ScreenHeader';
-import { Field, SelectField, ToggleCard } from '../components/FormField';
-import { luhnValid, tambahMetodeBayar, updateMetodeBayar } from '../lib/pembayaran';
+import { Field, SelectField } from '../components/FormField';
 import { notify } from '../lib/notify';
+import { ambilSaldo, isiSaldo, formatRupiah, formatTitik } from '../lib/saldo';
 
-const COUNTRIES = ['United States', 'Canada', 'United Kingdom', 'Indonesia'];
+// Sumber dana yang umum dipakai di Indonesia (simulasi, tidak terhubung ke bank/e-wallet asli)
+const METODE = [
+  'Transfer Bank BCA',
+  'Transfer Bank BRI',
+  'Transfer Bank Mandiri',
+  'Transfer Bank BNI',
+  'GoPay',
+  'OVO',
+  'DANA',
+  'ShopeePay',
+  'QRIS',
+];
 
-const formatCardNumber = (v) => v.replace(/\D/g, '').slice(0, 16).replace(/(.{4})/g, '$1 ').trim();
-const formatExpiry = (v) => {
-  const d = v.replace(/\D/g, '').slice(0, 4);
-  return d.length > 2 ? `${d.slice(0, 2)} / ${d.slice(2)}` : d;
-};
+const NOMINAL_CEPAT = [50000, 100000, 250000, 500000];
+const MIN = 10000;
+const MAX = 10000000;
 
-// Mengembalikan { error } atau { expMonth, expYear }
-const parseExpiry = (text) => {
-  const d = text.replace(/\D/g, '');
-  if (d.length !== 4) return { error: 'Masa berlaku harus berformat MM / YY.' };
-  const expMonth = Number(d.slice(0, 2));
-  const expYear = 2000 + Number(d.slice(2));
-  if (expMonth < 1 || expMonth > 12) return { error: 'Bulan masa berlaku tidak valid.' };
-  const now = new Date();
-  const kadaluarsa =
-    expYear < now.getFullYear() || (expYear === now.getFullYear() && expMonth < now.getMonth() + 1);
-  if (kadaluarsa) return { error: 'Kartu sudah kedaluwarsa.' };
-  return { expMonth, expYear };
-};
-
-export default function AddPayment({ navigation, route }) {
-  // Kalau dibuka dari tombol Edit, item kartu dikirim lewat route.params.item
-  const editing = route?.params?.item || null;
+export default function AddPayment({ navigation }) {
   const { theme } = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const insets = useSafeAreaInsets();
 
-  const [name, setName] = useState(editing?.holder || '');
-  const [number, setNumber] = useState(editing ? `•••• •••• •••• ${editing.last4}` : '');
-  const [expiry, setExpiry] = useState(
-    editing ? `${String(editing.expMonth).padStart(2, '0')} / ${String(editing.expYear).slice(-2)}` : '',
-  );
-  const [cvv, setCvv] = useState('');
-  const [country, setCountry] = useState(editing?.country || 'United States');
-  const [zip, setZip] = useState(editing?.zip || '');
-  const [isDefault, setIsDefault] = useState(editing ? editing.isDefault : true);
+  const [metode, setMetode] = useState(METODE[0]);
+  const [nominal, setNominal] = useState(''); // hanya angka, tanpa titik
+  const [saldo, setSaldo] = useState(null);
   const [saving, setSaving] = useState(false);
+
+  const angka = Number(nominal || 0);
+
+  useEffect(() => {
+    let aktif = true;
+    ambilSaldo()
+      .then((s) => { if (aktif) setSaldo(s); })
+      .catch(() => {}); // gagal memuat saldo: form tetap bisa dipakai
+    return () => { aktif = false; };
+  }, []);
 
   const onSave = async () => {
     if (saving) return;
 
-    const digits = number.replace(/\D/g, '');
-    const exp = parseExpiry(expiry);
-
-    let problem = null;
-    if (name.trim().length < 2) problem = 'Isi nama pemilik kartu.';
-    else if (!editing && (digits.length < 13 || !luhnValid(digits))) problem = 'Nomor kartu tidak valid.';
-    else if (exp.error) problem = exp.error;
-    else if (!editing && cvv.length < 3) problem = 'Kode keamanan (CVV) tidak valid.';
-
-    if (problem) {
-      notify('Data belum lengkap', problem);
+    let masalah = null;
+    if (!angka) masalah = 'Isi nominal saldo.';
+    else if (angka < MIN) masalah = `Minimal isi saldo ${formatRupiah(MIN)}.`;
+    else if (angka > MAX) masalah = `Maksimal sekali isi ${formatRupiah(MAX)}.`;
+    if (masalah) {
+      notify('Nominal belum sesuai', masalah);
       return;
     }
 
     setSaving(true);
     try {
-      // Hanya brand, 4 digit terakhir, dan masa berlaku yang disimpan.
-      // Nomor penuh dan CVV tidak dikirim ke database.
-      const payload = {
-        holder: name,
-        number: digits,
-        expMonth: exp.expMonth,
-        expYear: exp.expYear,
-        country,
-        zip,
-        isDefault,
-      };
-      if (editing) await updateMetodeBayar(editing.id, payload);
-      else await tambahMetodeBayar(payload);
+      const baru = await isiSaldo(angka, metode);
+      notify('Berhasil', `Saldo bertambah ${formatRupiah(angka)}. Saldo kamu sekarang ${formatRupiah(baru)}.`);
       navigation.goBack();
     } catch (e) {
-      notify(editing ? 'Gagal memperbarui kartu' : 'Gagal menyimpan kartu', e.message);
+      notify('Gagal mengisi saldo', e.message);
     } finally {
       setSaving(false);
     }
@@ -101,7 +82,7 @@ export default function AddPayment({ navigation, route }) {
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <ScreenHeader title={editing ? 'Edit Payment' : 'Add New Payment'} navigation={navigation} />
+        <ScreenHeader title="Isi Saldo" navigation={navigation} />
 
         <ScrollView
           contentContainerStyle={styles.scrollContent}
@@ -109,66 +90,54 @@ export default function AddPayment({ navigation, route }) {
           keyboardShouldPersistTaps="handled"
         >
           <FadeInView>
-            <Text style={styles.eyebrow}>A LITTLE EASIER AT CHECKOUT</Text>
-            <Text style={styles.intro}>Save a card for your next fresh-from-the-oven favorite.</Text>
-
-            <View style={styles.sectionRow}>
-              <Text style={styles.eyebrow}>CARD DETAILS</Text>
-              <View style={styles.brands}>
-                <View style={styles.brandChip}><Text style={styles.brandText}>VISA</Text></View>
-                <View style={styles.brandChip}><Text style={styles.brandText}>Mastercard</Text></View>
-              </View>
+            <View style={styles.saldoCard}>
+              <Text style={styles.saldoLabel}>Saldo kamu saat ini</Text>
+              <Text style={styles.saldoValue}>{saldo === null ? '…' : formatRupiah(saldo)}</Text>
             </View>
-
-            <Field label="Cardholder name" placeholder="Sophie Miller"
-              value={name} onChangeText={setName} autoCapitalize="words" textContentType="name" />
 
             <Field
-              label="Card number"
-              placeholder="4242 4242 4242 4242"
-              value={number}
-              onChangeText={(v) => { if (!editing) setNumber(formatCardNumber(v)); }}
-              editable={!editing}
+              label="Nominal isi saldo (Rp)"
+              placeholder="Contoh: 100.000"
+              value={formatTitik(nominal)}
+              onChangeText={(v) => setNominal(v.replace(/\D/g, '').slice(0, 8))}
               keyboardType="number-pad"
-              maxLength={19}
-              textContentType="creditCardNumber"
-              right={<Ionicons name="card-outline" size={22} color={theme.textMuted} />}
+              maxLength={11}
             />
 
-            <View style={styles.row}>
-              <Field label="Expiry date" style={styles.half} placeholder="MM / YY"
-                value={expiry} onChangeText={(v) => setExpiry(formatExpiry(v))} keyboardType="number-pad" maxLength={7} />
-              {!editing && (
-                <Field
-                  label="Security code (CVV)"
-                  style={styles.half}
-                  placeholder="•••"
-                  value={cvv}
-                  onChangeText={(v) => setCvv(v.replace(/\D/g, '').slice(0, 4))}
-                  keyboardType="number-pad"
-                  secureTextEntry
-                  maxLength={4}
-                  right={<Ionicons name="help-circle-outline" size={22} color={theme.textMuted} />}
-                />
-              )}
+            <View style={styles.chipRow}>
+              {NOMINAL_CEPAT.map((n) => {
+                const aktif = angka === n;
+                return (
+                  <TouchableOpacity
+                    key={n}
+                    style={[styles.chip, aktif && styles.chipActive]}
+                    onPress={() => setNominal(String(n))}
+                    activeOpacity={0.8}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected: aktif }}
+                  >
+                    <Text style={[styles.chipText, aktif && styles.chipTextActive]}>
+                      {formatTitik(String(n))}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
             </View>
 
-            <View style={styles.row}>
-              <SelectField label="Billing country" style={styles.half} value={country} options={COUNTRIES} onChange={setCountry} />
-              <Field label="ZIP code" style={styles.half} placeholder="11201"
-                value={zip} onChangeText={setZip} keyboardType="number-pad" maxLength={10} />
-            </View>
+            <SelectField label="Sumber dana" value={metode} options={METODE} onChange={setMetode} />
 
-            <ToggleCard
-              title="Set as default payment"
-              subtitle="Use this card for future orders."
-              value={isDefault}
-              onChange={setIsDefault}
-            />
+            {saldo !== null && angka >= MIN && angka <= MAX && (
+              <Text style={styles.preview}>
+                Saldo setelah diisi: <Text style={styles.previewBold}>{formatRupiah(saldo + angka)}</Text>
+              </Text>
+            )}
 
-            <View style={styles.secureRow}>
-              <Ionicons name="lock-closed-outline" size={16} color={theme.textMuted} />
-              <Text style={styles.secureText}>Only the last 4 digits are stored. Never the full number or CVV.</Text>
+            <View style={styles.infoRow}>
+              <Ionicons name="information-circle-outline" size={18} color={theme.textMuted} />
+              <Text style={styles.infoText}>
+                Ini saldo simulasi. Aplikasi belum terhubung ke uang sungguhan, jadi tidak ada dana yang dipotong
+                dari bank atau e-wallet.
+              </Text>
             </View>
           </FadeInView>
         </ScrollView>
@@ -184,7 +153,7 @@ export default function AddPayment({ navigation, route }) {
             {saving ? (
               <ActivityIndicator color={theme.onPrimary} />
             ) : (
-              <Text style={styles.saveText}>{editing ? 'Update Payment' : 'Save Payment'}</Text>
+              <Text style={styles.saveText}>Isi Saldo</Text>
             )}
           </TouchableOpacity>
         </View>
@@ -197,23 +166,37 @@ const createStyles = (t) =>
   StyleSheet.create({
     safeArea: { flex: 1, backgroundColor: t.background },
     scrollContent: { paddingHorizontal: 20, paddingBottom: 16 },
-    eyebrow: { color: t.textMuted, fontSize: 11, fontWeight: '700', letterSpacing: 1.4 },
-    intro: { color: t.textMuted, fontSize: 15, lineHeight: 23, marginTop: 10, marginBottom: 26 },
-    sectionRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
-    brands: { flexDirection: 'row', gap: 8 },
-    brandChip: {
-      paddingHorizontal: 12,
-      paddingVertical: 7,
-      borderRadius: 10,
+
+    saldoCard: {
+      padding: 18,
+      borderRadius: 16,
+      borderWidth: 1,
+      borderColor: t.border,
+      backgroundColor: t.surface,
+      marginBottom: 22,
+    },
+    saldoLabel: { color: t.textMuted, fontSize: 12 },
+    saldoValue: { color: t.text, fontSize: 26, fontWeight: '700', marginTop: 6 },
+
+    chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 18 },
+    chip: {
+      paddingHorizontal: 14,
+      paddingVertical: 9,
+      borderRadius: 12,
       borderWidth: 1,
       borderColor: t.border,
       backgroundColor: t.surface,
     },
-    brandText: { color: t.primary, fontSize: 12, fontWeight: '700' },
-    row: { flexDirection: 'row', gap: 12 },
-    half: { flex: 1 },
-    secureRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 4 },
-    secureText: { color: t.textMuted, fontSize: 12, flexShrink: 1, textAlign: 'center' },
+    chipActive: { backgroundColor: t.primary, borderColor: t.primary },
+    chipText: { color: t.text, fontSize: 13, fontWeight: '600' },
+    chipTextActive: { color: t.onPrimary },
+
+    preview: { color: t.textMuted, fontSize: 13, marginTop: 4, marginBottom: 6 },
+    previewBold: { color: t.text, fontWeight: '700' },
+
+    infoRow: { flexDirection: 'row', gap: 8, marginTop: 16, alignItems: 'flex-start' },
+    infoText: { flex: 1, color: t.textMuted, fontSize: 12, lineHeight: 18 },
+
     saveButton: {
       height: 54,
       marginHorizontal: 20,

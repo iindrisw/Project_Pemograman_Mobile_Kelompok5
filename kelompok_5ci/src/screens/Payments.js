@@ -13,116 +13,85 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useTheme } from '../theme/ThemeContext';
 import FadeInView from '../components/FadeInView';
 import ScreenHeader from '../components/ScreenHeader';
-import { ambilMetodeBayar, hapusMetodeBayar, jadikanDefaultMetode } from '../lib/pembayaran';
-import { confirmDialog, notify } from '../lib/notify';
-
-const pad = (n) => String(n).padStart(2, '0');
+import { notify } from '../lib/notify';
+import { ambilSaldo, ambilRiwayatSaldo, formatRupiah, formatWaktu } from '../lib/saldo';
 
 export default function Payments({ navigation }) {
   const { theme } = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const insets = useSafeAreaInsets();
 
-  const [items, setItems] = useState([]);
+  const [saldo, setSaldo] = useState(0);
+  const [riwayat, setRiwayat] = useState([]);
   const [loading, setLoading] = useState(true);
 
   const muat = useCallback(async () => {
     try {
-      setItems(await ambilMetodeBayar());
+      const [s, r] = await Promise.all([ambilSaldo(), ambilRiwayatSaldo()]);
+      setSaldo(s);
+      setRiwayat(r);
     } catch (e) {
-      notify('Gagal memuat metode pembayaran', e.message);
+      notify('Gagal memuat saldo', e.message);
     } finally {
       setLoading(false);
     }
   }, []);
 
-  // Muat ulang tiap kali halaman ini kembali fokus (mis. setelah AddPayment)
-  useFocusEffect(
-    useCallback(() => {
-      muat();
-    }, [muat]),
-  );
-
-  const onDefault = async (id) => {
-    try {
-      await jadikanDefaultMetode(id);
-      await muat();
-    } catch (e) {
-      notify('Gagal mengubah kartu utama', e.message);
-    }
-  };
-
-  const onDelete = async (item) => {
-    const ok = await confirmDialog('Hapus kartu?', `${item.brand} •••• ${item.last4}`);
-    if (!ok) return;
-    try {
-      await hapusMetodeBayar(item.id);
-      await muat();
-    } catch (e) {
-      notify('Gagal menghapus kartu', e.message);
-    }
-  };
+  // Muat ulang tiap kali halaman ini kembali fokus (mis. setelah isi saldo atau checkout)
+  useFocusEffect(useCallback(() => { muat(); }, [muat]));
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
-      <ScreenHeader title="Payment Methods" navigation={navigation} />
+      <ScreenHeader title="Saldo & Pembayaran" navigation={navigation} />
 
       {loading ? (
         <ActivityIndicator size="large" color={theme.primary} style={{ marginTop: 40 }} />
       ) : (
         <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
           <FadeInView>
-            {items.length === 0 && (
-              <Text style={styles.empty}>Belum ada kartu tersimpan. Tambahkan kartu pertamamu.</Text>
-            )}
-
-            {items.map((p) => (
-              <View key={p.id} style={[styles.card, p.isDefault && styles.cardDefault]}>
-                <View style={styles.cardTop}>
-                  <View style={styles.brandRow}>
-                    <Ionicons name="card-outline" size={20} color={theme.primary} />
-                    <Text style={styles.brand}>{p.brand}</Text>
-                  </View>
-                  {p.isDefault && (
-                    <View style={styles.badge}>
-                      <Text style={styles.badgeText}>Default</Text>
-                    </View>
-                  )}
-                </View>
-
-                <Text style={styles.number}>•••• •••• •••• {p.last4}</Text>
-                <View style={styles.metaRow}>
-                  <Text style={styles.meta}>{p.holder}</Text>
-                  <Text style={styles.meta}>Exp {pad(p.expMonth)}/{String(p.expYear).slice(-2)}</Text>
-                </View>
-
-                <View style={styles.actions}>
-                  <TouchableOpacity
-                    onPress={() => navigation.navigate('AddPayment', { item: p })}
-                    accessibilityRole="button"
-                    accessibilityLabel={`Edit kartu ${p.brand} berakhiran ${p.last4}`}
-                    style={styles.editBtn}
-                  >
-                    <Ionicons name="create-outline" size={16} color={theme.primary} />
-                    <Text style={styles.actionText}>Edit</Text>
-                  </TouchableOpacity>
-                  {!p.isDefault && (
-                    <TouchableOpacity onPress={() => onDefault(p.id)} accessibilityRole="button">
-                      <Text style={styles.actionText}>Set as default</Text>
-                    </TouchableOpacity>
-                  )}
-                  <TouchableOpacity
-                    onPress={() => onDelete(p)}
-                    accessibilityRole="button"
-                    accessibilityLabel={`Hapus kartu ${p.brand} berakhiran ${p.last4}`}
-                    style={styles.deleteBtn}
-                  >
-                    <Ionicons name="trash-outline" size={16} color={theme.danger || '#D64545'} />
-                    <Text style={[styles.actionText, { color: theme.danger || '#D64545' }]}>Delete</Text>
-                  </TouchableOpacity>
-                </View>
+            <View style={styles.saldoCard}>
+              <View style={styles.saldoTop}>
+                <Ionicons name="wallet-outline" size={20} color={theme.primary} />
+                <Text style={styles.saldoLabel}>Saldo Saya</Text>
               </View>
-            ))}
+              <Text style={styles.saldoValue}>{formatRupiah(saldo)}</Text>
+              <Text style={styles.saldoNote}>
+                Saldo simulasi, dipakai untuk membayar pesanan saat checkout.
+              </Text>
+            </View>
+
+            <Text style={styles.eyebrow}>RIWAYAT SALDO</Text>
+
+            {riwayat.length === 0 ? (
+              <Text style={styles.empty}>Belum ada transaksi. Isi saldo untuk mulai memesan.</Text>
+            ) : (
+              riwayat.map((r) => {
+                const masuk = r.jumlah >= 0;
+                return (
+                  <View key={r.id} style={styles.row}>
+                    <View style={styles.rowIcon}>
+                      <Ionicons
+                        name={masuk ? 'arrow-down-outline' : 'arrow-up-outline'}
+                        size={16}
+                        color={masuk ? theme.success || theme.primary : theme.danger || '#D64545'}
+                      />
+                    </View>
+                    <View style={styles.rowInfo}>
+                      <Text style={styles.rowTitle} numberOfLines={1}>{r.metode}</Text>
+                      <Text style={styles.rowDate}>{formatWaktu(r.waktu)}</Text>
+                    </View>
+                    <Text
+                      style={[
+                        styles.rowAmount,
+                        { color: masuk ? theme.success || theme.primary : theme.danger || '#D64545' },
+                      ]}
+                    >
+                      {masuk ? '+' : '−'}{formatRupiah(Math.abs(r.jumlah))}
+                    </Text>
+                  </View>
+                );
+              })
+            )}
           </FadeInView>
         </ScrollView>
       )}
@@ -135,7 +104,7 @@ export default function Payments({ navigation }) {
           accessibilityRole="button"
         >
           <Ionicons name="add" size={20} color={theme.onPrimary} />
-          <Text style={styles.addText}>Add New Payment</Text>
+          <Text style={styles.addText}>Isi Saldo</Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>
@@ -146,28 +115,47 @@ const createStyles = (t) =>
   StyleSheet.create({
     safeArea: { flex: 1, backgroundColor: t.background },
     scrollContent: { paddingHorizontal: 20, paddingBottom: 16 },
-    empty: { color: t.textMuted, textAlign: 'center', marginTop: 40, fontSize: 14 },
-    card: {
+
+    saldoCard: {
       backgroundColor: t.surface,
-      borderRadius: 16,
+      borderRadius: 18,
+      borderWidth: 1,
+      borderColor: t.primary,
+      padding: 18,
+      marginBottom: 26,
+    },
+    saldoTop: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+    saldoLabel: { color: t.textMuted, fontSize: 13, fontWeight: '600' },
+    saldoValue: { color: t.text, fontSize: 30, fontWeight: '700', marginTop: 10 },
+    saldoNote: { color: t.textMuted, fontSize: 12, marginTop: 8, lineHeight: 18 },
+
+    eyebrow: { color: t.textMuted, fontSize: 11, fontWeight: '700', letterSpacing: 1.4, marginBottom: 12 },
+    empty: { color: t.textMuted, textAlign: 'center', marginTop: 24, fontSize: 14 },
+
+    row: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: t.surface,
+      borderRadius: 14,
       borderWidth: 1,
       borderColor: t.border,
-      padding: 16,
-      marginBottom: 14,
+      padding: 12,
+      marginBottom: 8,
+      gap: 12,
     },
-    cardDefault: { borderColor: t.primary },
-    cardTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
-    brandRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-    brand: { color: t.text, fontSize: 15, fontWeight: '700' },
-    badge: { backgroundColor: t.badgeBg, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4 },
-    badgeText: { color: t.primary, fontSize: 11, fontWeight: '700' },
-    number: { color: t.text, fontSize: 17, fontWeight: '600', letterSpacing: 1.5, marginBottom: 10 },
-    metaRow: { flexDirection: 'row', justifyContent: 'space-between' },
-    meta: { color: t.textMuted, fontSize: 13 },
-    actions: { flexDirection: 'row', alignItems: 'center', gap: 16, marginTop: 14 },
-    editBtn: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-    actionText: { color: t.primary, fontSize: 13, fontWeight: '600' },
-    deleteBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, marginLeft: 'auto' },
+    rowIcon: {
+      width: 32,
+      height: 32,
+      borderRadius: 16,
+      backgroundColor: t.badgeBg,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    rowInfo: { flex: 1 },
+    rowTitle: { color: t.text, fontSize: 14, fontWeight: '600' },
+    rowDate: { color: t.textMuted, fontSize: 11, marginTop: 2 },
+    rowAmount: { fontSize: 14, fontWeight: '700' },
+
     addButton: {
       height: 54,
       marginHorizontal: 20,
