@@ -11,5 +11,8 @@ Tabel Product
 Tabel User
 <img width="912" height="371" alt="image" src="https://github.com/user-attachments/assets/b6ee6ed9-c87a-43f6-a9c7-80630a6ce6a6" />
 
+Dokumentasi CRUD
+<img width="400" height="212" alt="Chikara Bakery - Google Chrome 2026-11-12 13-39-13" src="https://github.com/user-attachments/assets/3cf702cf-02f0-4212-9bab-237b4d758513" />
+
 
 
