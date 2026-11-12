@@ -1,0 +1,18 @@
+id,nama,harga,deskripsi,kategori,stok,foto_url,created_at
+073f512c-704e-4eb1-b1b4-515930dcc28a,Beef Ragout Risoles,30000.00,,Other,9,https://qmpakxotaamhvsljboam.supabase.co/storage/v1/object/public/produk/produk/1794319505361-j4m9bp.jpg,2026-11-10 14:05:09.164009+00
+0ebce67a-5e5a-4dc0-b56d-88705c6c22e4,Garlic Herb Palmiers,10000.00,,Pastries,10,https://qmpakxotaamhvsljboam.supabase.co/storage/v1/object/public/produk/produk/1794318177465-ulz94i.jpg,2026-11-10 13:43:03.764599+00
+1276c63a-0288-4ed0-a0ed-6fa7c01cd68f,Garlic Butter Bruschetta,39000.00,,Bread,9,https://qmpakxotaamhvsljboam.supabase.co/storage/v1/object/public/produk/produk/1794319664047-kea4jp.jpg,2026-11-10 14:07:48.071884+00
+14ce6e4a-5496-4d36-b848-4bd8efde9c17,Mactha Green Tea,30000.00,,Bread,10,https://qmpakxotaamhvsljboam.supabase.co/storage/v1/object/public/produk/produk/1794317235466-w967fy.jpg,2026-11-10 13:27:44.709261+00
+1c9fde4f-dd8f-4a46-83bd-03710d501056,cream cheese Bun,2000.00,10,Bread,0,https://qmpakxotaamhvsljboam.supabase.co/storage/v1/object/public/produk/produk/1794315870468-p8tks9.jpg,2026-11-10 13:04:37.95045+00
+1dfbacdd-3b18-4889-b260-c2d7f2f04474,Kue Nastar,20000.00,Kue kering dengan isian selai,Cakes,9,https://qmpakxotaamhvsljboam.supabase.co/storage/v1/object/public/produk/produk/1794466493571-iz404p.jpg,2026-11-12 06:54:54.389936+00
+3506f07f-5e7b-40d8-b855-628690513c39,Creamy Palm Sugar,20000.00,,Drinks,10,https://qmpakxotaamhvsljboam.supabase.co/storage/v1/object/public/produk/produk/1794318994846-48wj5c.jpg,2026-11-10 13:56:39.606534+00
+6dda2e7e-1313-495a-bad8-c677c689b2b4,Spinach & Feta Danish,100000.00,,Pastries,10,https://qmpakxotaamhvsljboam.supabase.co/storage/v1/object/public/produk/produk/1794317994054-4g1y4j.jpg,2026-11-10 13:40:02.310096+00
+87cb90b9-33b4-4a3b-84bb-48342e000afc,Classic Tiramisu Box,20000.00,,Cakes,5,https://qmpakxotaamhvsljboam.supabase.co/storage/v1/object/public/produk/produk/1794318568170-atz9ah.jpg,2026-11-10 13:49:33.111594+00
+8fef20c3-d812-426f-a6d4-71e29d3a2b20,Smoked Beef & Cheese Croissant,20000.00,,Pastries,10,https://qmpakxotaamhvsljboam.supabase.co/storage/v1/object/public/produk/produk/1794317718109-02weyh.jpg,2026-11-10 13:35:22.144017+00
+a3f725e4-3db3-4627-8c31-ed59a8c9cf15,Hokaido Strawberry Shortcake,34000.00,,Cakes,5,https://qmpakxotaamhvsljboam.supabase.co/storage/v1/object/public/produk/produk/1794318809466-5qjki4.jpg,2026-11-10 13:53:33.046586+00
+a5f0e245-56c5-4f43-8a94-e0f2de903114,Matcha Latte,20000.00,,Drinks,10,https://qmpakxotaamhvsljboam.supabase.co/storage/v1/object/public/produk/produk/1794319189340-9padxl.jpg,2026-11-10 13:59:58.48596+00
+b892aeb0-7571-4f09-9cf6-767ab1067c9d,Risol Mayo,1000.00,,Pastries,1,https://qmpakxotaamhvsljboam.supabase.co/storage/v1/object/public/produk/produk/1794327384260-0gfxdu.jpg,2026-11-10 16:16:52.829292+00
+e176bc36-a426-4da2-86d9-b89ab7a580a8,Mactha Green Tea,39000.00,,Bread,10,https://qmpakxotaamhvsljboam.supabase.co/storage/v1/object/public/produk/produk/1794317235466-w967fy.jpg,2026-11-10 13:28:55.790021+00
+e75cf64a-d39f-4852-a2c0-481904c990bd,Beef Sausage Puff,34000.00,,Pastries,10,https://qmpakxotaamhvsljboam.supabase.co/storage/v1/object/public/produk/produk/1794318424695-8icxhc.jpg,2026-11-10 13:47:08.502232+00
+e950870a-2a0e-4b97-9e0a-4c8982a3ef62,Japanese Milk Bun,42000.00,,Bread,9,https://qmpakxotaamhvsljboam.supabase.co/storage/v1/object/public/produk/produk/1794316108593-cgtaly.jpg,2026-11-10 13:08:36.637463+00
+e97b4296-f906-4ee7-9138-b5228c5510be,Nutella Stuffed Bun,29000.00,,Bread,10,https://qmpakxotaamhvsljboam.supabase.co/storage/v1/object/public/produk/produk/1794316431117-6en7y5.jpg,2026-11-10 13:13:57.360883+00

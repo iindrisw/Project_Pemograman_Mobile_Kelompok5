@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useCallback, useMemo } from 'react';
+import { catatKeranjang } from '../lib/rekomendasi';
 
 const CartContext = createContext(null);
 
@@ -15,6 +16,7 @@ export function CartProvider({ children }) {
   const [cartItems, setCartItems] = useState([]);
 
   const addToCart = useCallback((item) => {
+    catatKeranjang(item.id); // riwayat keranjang untuk model rekomendasi
     setCartItems((prev) => {
       const idx = prev.findIndex((i) => i.id === item.id);
       if (idx > -1) {

@@ -1,5 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
+  ActivityIndicator,
+  Alert,
   Image,
   ScrollView,
   StyleSheet,
@@ -14,6 +16,7 @@ import { useTheme } from '../theme/ThemeContext';
 import FadeInView from '../components/FadeInView';
 import { supabase } from '../lib/supabase';
 import { useProfil } from '../lib/auth';
+import { latihDanSimpanRekomendasi } from '../lib/latihRekomendasi';
 
 // Nama route tiap menu (harus sama dengan name di Stack.Screen pada App.js)
 const routeByLabel = {
@@ -35,6 +38,7 @@ export default function ProfileScreen({ navigation }) {
   const styles = useMemo(() => createStyles(theme), [theme]);
   const insets = useSafeAreaInsets();
   const [username, setUsername] = useState('');
+  const [melatih, setMelatih] = useState(false);
   const { isAdmin, profil } = useProfil();
 
   // Ambil username dari akun Supabase yang sedang login
@@ -49,6 +53,24 @@ export default function ProfileScreen({ navigation }) {
   const goToHome = () => navigation.navigate('Home');
   // Admin ke Menu (ada tombol kelola produk), user biasa ke UserMenu
   const goToMenu = () => navigation.navigate(isAdmin ? 'Menu' : 'UserMenu');
+
+  // Admin: latih ulang model hybrid dari keranjang + pesanan semua akun, simpan ke tabel rekomendasi
+  const perbaruiRekomendasi = async () => {
+    if (melatih) return;
+    setMelatih(true);
+    try {
+      const r = await latihDanSimpanRekomendasi();
+      Alert.alert(
+        'Rekomendasi diperbarui',
+        `${r.nUser} akun, ${r.nProduk} produk, ${r.nInteraksi} pasangan akun-produk diproses.\n` +
+          `${r.nBaris} rekomendasi disimpan.`,
+      );
+    } catch (e) {
+      Alert.alert('Gagal memperbarui rekomendasi', e?.message || 'Terjadi kesalahan.');
+    } finally {
+      setMelatih(false);
+    }
+  };
 
   const logOut = async () => {
     try {
@@ -119,6 +141,28 @@ export default function ProfileScreen({ navigation }) {
               );
             })}
           </View>
+
+          {/* Khusus admin: latih ulang model rekomendasi dari data penjualan & keranjang */}
+          {isAdmin && (
+            <TouchableOpacity
+              style={[styles.adminButton, melatih && styles.adminButtonBusy]}
+              onPress={perbaruiRekomendasi}
+              disabled={melatih}
+              activeOpacity={0.85}
+              accessibilityRole="button"
+              accessibilityLabel="Update rekomendasi produk"
+              accessibilityState={{ busy: melatih, disabled: melatih }}
+            >
+              {melatih ? (
+                <ActivityIndicator size="small" color={theme.onPrimary} />
+              ) : (
+                <Ionicons name="sparkles-outline" size={17} color={theme.onPrimary} />
+              )}
+              <Text style={styles.adminButtonText}>
+                {melatih ? 'Memperbarui rekomendasi…' : 'Update Rekomendasi'}
+              </Text>
+            </TouchableOpacity>
+          )}
 
           <TouchableOpacity
             style={styles.logoutButton}
@@ -219,6 +263,24 @@ const createStyles = (t) => StyleSheet.create({
     marginLeft: 11,
     color: t.text,
     fontSize: 13,
+  },
+  adminButton: {
+    minHeight: 40,
+    marginTop: 15,
+    borderRadius: 9,
+    backgroundColor: t.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+    gap: 8,
+  },
+  adminButtonBusy: {
+    opacity: 0.75,
+  },
+  adminButtonText: {
+    color: t.onPrimary,
+    fontSize: 12,
+    fontWeight: '700',
   },
   logoutButton: {
     minHeight: 38,

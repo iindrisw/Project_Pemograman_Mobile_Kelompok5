@@ -1,56 +1,58 @@
-# Welcome to your Expo app 👋
+# Chikara Bake
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+Aplikasi pemesanan toko roti (React Native + Expo + Supabase) dengan sistem rekomendasi produk personal berbasis **hybrid filtering**.
 
-## Get started
+## Coba cepat (tanpa install apa pun selain Expo Go)
 
-1. Install dependencies
+1. Pasang **Expo Go** di HP (Android: Play Store, iOS: App Store).
+2. Scan QR di bawah (Android: dari dalam Expo Go, iOS: dari aplikasi Kamera).
 
-   ```bash
-   npm install
-   ```
+   ![QR Expo Go](docs/qr-expo-go.png)
 
-2. Start the app
+   > QR ini dibuat saat publikasi. Cara membuat atau memperbaruinya ada di bagian *Membuat QR* di bawah.
+3. Daftar akun baru lewat tab **Register**, lalu pilih produk dan checkout.
+   Isi saldo dulu di Profile > Saldo & Pembayaran (saldo simulasi, bukan uang sungguhan).
 
-   ```bash
-   npx expo start
-   ```
+## Fitur
+- Login & register (Supabase Auth), peran **user** dan **admin**
+- Admin: tambah, ubah, hapus produk (dengan foto). User: lihat menu, keranjang, checkout
+- Checkout dengan validasi stok dan saldo (atomik di database), riwayat pesanan, harga dalam rupiah
+- Best Sellers dari pembelian semua akun
+- **Recommended for You**: rekomendasi personal dari riwayat keranjang dan pesanan (lihat `k5_recommender/`)
 
-In the output, you'll find options to open the app in a
-
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
-
+## Menjalankan dari source
 ```bash
-npm run reset-project
+npm install
+cp .env.example .env      # isi URL & key Supabase milikmu
+npx expo start            # scan QR di terminal dengan Expo Go
+```
+Pakai `npx expo start -c` kalau `.env` baru diubah.
+
+## Menyiapkan Supabase sendiri
+1. Buat project di supabase.com, matikan **Confirm email** (Authentication > Sign In / Providers > Email).
+2. Buat bucket Storage bernama `produk` (public).
+3. Jalankan file di folder `supabase/` berurutan di SQL Editor: `01_auth_roles.sql`, `03_best_seller.sql`, `04_riwayat_pesanan.sql`, `05_saldo.sql`, `06_pembayaran.sql`, `07_rekomendasi.sql`.
+   Tabel `products` dan policy Storage perlu dibuat lebih dulu (kolom: `id, nama, harga, deskripsi, kategori, stok, foto_url, created_at`).
+4. Akun admin: register dengan username `admin`. Kata sandi admin diberikan terpisah, jangan ditulis di repo.
+
+## Membuat QR Expo Go
+**A. Saat laptop menyala (paling mudah):** `npx expo start` lalu foto atau screenshot QR di terminal. QR hanya berlaku selama server hidup dan HP satu jaringan (`--tunnel` kalau beda jaringan).
+
+**B. Tetap aktif tanpa laptop (EAS Update):**
+```bash
+npm i -g eas-cli
+eas login
+eas update --branch preview --message "versi uji"
+```
+Buka halaman proyek di expo.dev, ambil QR atau link update, lalu simpan sebagai `docs/qr-expo-go.png`. Variabel `.env` ikut tertanam saat perintah ini dijalankan.
+
+## Struktur singkat
+```
+src/screens   layar aplikasi
+src/lib       akses Supabase (auth, produk, saldo, pesanan, rekomendasi)
+supabase/     skrip SQL
+k5_recommender/  pelatihan & evaluasi model rekomendasi (Python)
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
-
-### Other setup steps
-
-- To set up ESLint for linting, run `npx expo lint`, or follow our guide on ["Using ESLint and Prettier"](https://docs.expo.dev/guides/using-eslint/)
-- If you'd like to set up unit testing, follow our guide on ["Unit Testing with Jest"](https://docs.expo.dev/develop/unit-testing/)
-- Learn more about the TypeScript setup in this template in our guide on ["Using TypeScript"](https://docs.expo.dev/guides/typescript/)
-
-## Learn more
-
-To learn more about developing your project with Expo, look at the following resources:
-
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
-
-## Join the community
-
-Join our community of developers creating universal apps.
-
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+## Tim
+Kelompok 5, Pemrograman Mobile. [Sabbicarel edward piris, Indri setiawati, Prama, Farhan]

@@ -16,6 +16,7 @@ import { useTheme } from '../theme/ThemeContext';
 import { useCart } from '../context/CartContext';
 import { ambilSemuaProduk } from '../lib/produk';
 import { ambilIdTerlaris } from '../lib/penjualan';
+import { ambilIdRekomendasi } from '../lib/rekomendasi';
 
 /* ----------------------------- Static dummy data ----------------------------- */
 const categories = [
@@ -156,19 +157,22 @@ export default function HomeScreen({ navigation }) {
   const [produkBaru, setProdukBaru] = useState([]);
   const [memuat, setMemuat] = useState(true);
   const [idTerlaris, setIdTerlaris] = useState([]); // id produk, urut dari paling laris
+  const [idRekomendasi, setIdRekomendasi] = useState([]); // rekomendasi personal (hybrid)
 
   useFocusEffect(
     useCallback(() => {
       let aktif = true;
       (async () => {
         try {
-          const [data, idLaris] = await Promise.all([
+          const [data, idLaris, idRek] = await Promise.all([
             ambilSemuaProduk(),
             ambilIdTerlaris(6).catch(() => []), // gagal menghitung terlaris: kosongkan saja
+            ambilIdRekomendasi(6).catch(() => []), // belum ada rekomendasi: bagian disembunyikan
           ]);
           if (aktif) {
             setProdukBaru(data);
             setIdTerlaris(idLaris);
+            setIdRekomendasi(idRek);
           }
         } catch (e) {
           // gagal memuat: daftar dibiarkan kosong
@@ -186,6 +190,14 @@ export default function HomeScreen({ navigation }) {
       .map((id) => produkBaru.find((p) => String(p.id) === id))
       .filter(Boolean),
     [idTerlaris, produkBaru],
+  );
+
+  // Rekomendasi personal: dari riwayat keranjang + pesanan akun ini (hybrid filtering).
+  const rekomendasi = useMemo(
+    () => idRekomendasi
+      .map((id) => produkBaru.find((p) => String(p.id) === id))
+      .filter(Boolean),
+    [idRekomendasi, produkBaru],
   );
 
   const handleAdd = (item) => {
@@ -252,6 +264,38 @@ export default function HomeScreen({ navigation }) {
           </TouchableOpacity>
         ))}
       </View>
+
+      {/* 3b. Recommended for You (personal, hanya tampil kalau ada) */}
+      {rekomendasi.length > 0 && (
+        <>
+          <Text style={[styles.sectionTitle, styles.sectionSpacing]}>Recommended for You</Text>
+          <FlatList
+            data={rekomendasi}
+            keyExtractor={(item) => item.id}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.horizontalList}
+            ItemSeparatorComponent={() => <View style={{ width: 14 }} />}
+            renderItem={({ item }) => (
+              <TouchableOpacity
+                activeOpacity={0.9}
+                style={{ width: 180 }}
+                onPress={() => navigation.navigate('ProductDetail', { item })}
+                accessibilityRole="button"
+                accessibilityLabel={`${item.name}, ${item.price}. Rekomendasi untukmu. Lihat detail`}
+              >
+                <ProductCard
+                  image={item.image}
+                  name={item.name}
+                  price={item.price}
+                  onAddToCart={() => handleAdd(item)}
+                  style={{ width: '100%' }}
+                />
+              </TouchableOpacity>
+            )}
+          />
+        </>
+      )}
 
       {/* 4. Best Sellers (horizontal FlatList) */}
       <Text style={[styles.sectionTitle, styles.sectionSpacing]}>Best Sellers</Text>
