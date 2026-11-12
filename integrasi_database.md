@@ -12,7 +12,7 @@ Tabel User
 <img width="912" height="371" alt="image" src="https://github.com/user-attachments/assets/b6ee6ed9-c87a-43f6-a9c7-80630a6ce6a6" />
 
 Dokumentasi CRUD
-<video src="https://github.com/iindrisw/Project_Pemograman_Mobile_Kelompok5/raw/refs/heads/main/Proof/Chikara%20Bakery%20-%20Google%20Chrome%202026-11-12%2013-39-13%20(1).mp4" controls width="100%"></video>
+(https://drive.google.com/file/d/1WbRv45eMPxiRSX31cR4JoShVJIH0ijpj/view?usp=sharing)
 
 
 
