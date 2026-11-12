@@ -1,5 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
+  ActivityIndicator,
+  Alert,
   Image,
   ScrollView,
   StyleSheet,
@@ -9,11 +11,13 @@ import {
 } from 'react-native';
 import { CommonActions } from '@react-navigation/native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../theme/ThemeContext';
 import FadeInView from '../components/FadeInView';
 import { supabase } from '../lib/supabase';
 import { useProfil } from '../lib/auth';
+import { uploadFoto } from '../lib/produk';
 
 // Nama route tiap menu (harus sama dengan name di Stack.Screen pada App.js)
 const routeByLabel = {
@@ -35,16 +39,44 @@ export default function ProfileScreen({ navigation }) {
   const styles = useMemo(() => createStyles(theme), [theme]);
   const insets = useSafeAreaInsets();
   const [username, setUsername] = useState('');
+  const [avatarUri, setAvatarUri] = useState(null);
+  const [avatarLoading, setAvatarLoading] = useState(false);
   const { isAdmin, profil } = useProfil();
 
   // Ambil username dari akun Supabase yang sedang login
   useEffect(() => {
     let aktif = true;
     supabase.auth.getUser().then(({ data }) => {
-      if (aktif) setUsername(data?.user?.user_metadata?.username || '');
+      if (aktif) {
+        setUsername(data?.user?.user_metadata?.username || '');
+        setAvatarUri(data?.user?.user_metadata?.avatar_url || null);
+      }
     });
     return () => { aktif = false; };
   }, []);
+
+  const changeAvatar = async () => {
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        quality: 0.8,
+      });
+      if (result.canceled) return;
+
+      setAvatarLoading(true);
+      const avatarUrl = await uploadFoto(result.assets[0].uri);
+      const { error } = await supabase.auth.updateUser({
+        data: { avatar_url: avatarUrl },
+      });
+      if (error) throw error;
+
+      setAvatarUri(avatarUrl);
+    } catch (error) {
+      Alert.alert('Profile photo not updated', error.message || 'Please try again.');
+    } finally {
+      setAvatarLoading(false);
+    }
+  };
 
   const goToHome = () => navigation.navigate('Home');
   // Admin ke Menu (ada tombol kelola produk), user biasa ke UserMenu
@@ -74,14 +106,27 @@ export default function ProfileScreen({ navigation }) {
           showsVerticalScrollIndicator={false}
         >
           <View style={styles.profileHeader}>
-            <Image
-              source={{
-                uri: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=240&h=240&fit=crop&crop=faces',
-              }}
+            <TouchableOpacity
               style={styles.avatar}
-              accessibilityLabel="Profile photo"
-            />
+              onPress={changeAvatar}
+              disabled={avatarLoading}
+              activeOpacity={0.8}
+              accessibilityRole="button"
+              accessibilityLabel="Change profile photo"
+            >
+              {avatarLoading ? (
+                <ActivityIndicator color={theme.primary} />
+              ) : avatarUri ? (
+                <Image source={{ uri: avatarUri }} style={styles.avatarImage} />
+              ) : (
+                <Ionicons name="person" size={34} color={theme.textMuted} />
+              )}
+              <View style={styles.avatarEdit}>
+                <Ionicons name="camera" size={12} color={theme.onPrimary} />
+              </View>
+            </TouchableOpacity>
             <Text style={styles.name}>{username || profil?.username || 'Guest'}</Text>
+            <Text style={styles.avatarHint}>Tap to change photo</Text>
           </View>
 
           <View style={styles.optionsCard}>
@@ -191,12 +236,38 @@ const createStyles = (t) => StyleSheet.create({
     height: 64,
     borderRadius: 32,
     backgroundColor: t.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'visible',
+  },
+  avatarImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 32,
+  },
+  avatarEdit: {
+    position: 'absolute',
+    right: -2,
+    bottom: -2,
+    width: 23,
+    height: 23,
+    borderRadius: 12,
+    backgroundColor: t.primary,
+    borderWidth: 2,
+    borderColor: t.background,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   name: {
     marginTop: 8,
     color: t.text,
     fontSize: 17,
     fontWeight: '700',
+  },
+  avatarHint: {
+    marginTop: 4,
+    color: t.textMuted,
+    fontSize: 11,
   },
   optionsCard: {
     backgroundColor: t.surface,
