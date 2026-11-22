@@ -1,11 +1,13 @@
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
-import { NavigationContainer } from '@react-navigation/native';
+import { CommonActions, NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { ThemeProvider, useTheme } from './src/theme/ThemeContext';
 import { CartProvider } from './src/context/CartContext';
+import { supabase } from './src/lib/supabase';
 
 import OnboardingScreen from './src/screens/OnboardingScreen';
 import Login from './src/screens/Login';
@@ -13,7 +15,7 @@ import Signup from './src/screens/Signup';
 import HomeScreen from './src/screens/HomeScreen';
 import NewArrivalsScreen from './src/screens/NewArrivalsScreen';
 import MenuScreen from './src/screens/MenuScreen';
-import UserMenuScreen from './src/screens/UserMenuScreen'; 
+import UserMenuScreen from './src/screens/UserMenuScreen';
 import CartScreen from './src/screens/CartScreen';
 import ProductDetailScreen from './src/screens/ProductDetailScreen';
 import AddProductScreen from './src/screens/AddProductScreen';
@@ -30,14 +32,66 @@ import Support from './src/screens/Support';
 const Stack = createNativeStackNavigator();
 
 function RootNavigator() {
-  const { isDark } = useTheme();
+  const { theme, isDark } = useTheme();
+  const navigationRef = useRef(null);
+  const [session, setSession] = useState(undefined);
+
+  useEffect(() => {
+    let aktif = true;
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, newSession) => {
+      if (!aktif) return;
+      setSession(newSession ?? null);
+
+      if (newSession && navigationRef.current?.isReady()) {
+        const currentRoute = navigationRef.current.getCurrentRoute()?.name;
+        if (['Onboarding', 'Login', 'Signup'].includes(currentRoute)) {
+          navigationRef.current.dispatch(
+            CommonActions.reset({ index: 0, routes: [{ name: 'Home' }] }),
+          );
+        }
+      }
+    });
+
+    supabase.auth.getSession().then(({ data }) => {
+      if (aktif) {
+        setSession((prev) => (prev === undefined ? (data.session ?? null) : prev));
+      }
+    });
+
+    return () => {
+      aktif = false;
+      subscription.unsubscribe();
+    };
+  }, []);
+
+  if (session === undefined) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: theme.background }}>
+        <StatusBar style={isDark ? 'light' : 'dark'} />
+        <ActivityIndicator size="large" color={theme.primary} />
+      </View>
+    );
+  }
 
   return (
     <>
       <StatusBar style={isDark ? 'light' : 'dark'} />
-      <NavigationContainer>
+      <NavigationContainer
+        ref={navigationRef}
+        onReady={() => {
+          if (session && navigationRef.current) {
+            const currentRoute = navigationRef.current.getCurrentRoute()?.name;
+            if (['Onboarding', 'Login', 'Signup'].includes(currentRoute)) {
+              navigationRef.current.dispatch(
+                CommonActions.reset({ index: 0, routes: [{ name: 'Home' }] }),
+              );
+            }
+          }
+        }}
+      >
         <Stack.Navigator
-          initialRouteName="Onboarding"
+          initialRouteName={session ? 'Home' : 'Onboarding'}
           screenOptions={{
             headerShown: false,
             animation: 'slide_from_right',

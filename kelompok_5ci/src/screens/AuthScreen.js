@@ -15,8 +15,12 @@ import {
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { CommonActions } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import * as WebBrowser from 'expo-web-browser';
+import { makeRedirectUri } from 'expo-auth-session';
 import { useTheme } from '../theme/ThemeContext';
 import { supabase } from '../lib/supabase';
+
+WebBrowser.maybeCompleteAuthSession();
 
 const breadImage = require('../../assets/splash_screen/logo_spl_s.png');
 
@@ -129,14 +133,12 @@ export default function AuthScreen({ navigation, mode }) {
   const confirmRef = useRef(null);
 
   const errors = useMemo(() => validate(values, isLogin), [values, isLogin]);
-  // Error tampil setelah field disentuh (blur) atau setelah tombol ditekan
   const showError = (field) => (submitted || touched[field]) && errors[field];
 
   const setField = (field) => (text) => setValues((v) => ({ ...v, [field]: text }));
   const markTouched = (field) => () => setTouched((t) => ({ ...t, [field]: true }));
 
   const goHome = () =>
-    // reset supaya tombol back tidak kembali ke halaman login/register
     navigation.dispatch(CommonActions.reset({ index: 0, routes: [{ name: 'Home' }] }));
 
   const handleSubmit = async () => {
@@ -158,11 +160,10 @@ export default function AuthScreen({ navigation, mode }) {
         const { data, error } = await supabase.auth.signUp({
           email,
           password: values.password,
-          options: { data: { username } }, // tersimpan di user_metadata
+          options: { data: { username } },
         });
         if (error) throw error;
 
-        // session null = Supabase masih meminta konfirmasi email
         if (!data.session) {
           notify(
             'Konfirmasi dibutuhkan',
@@ -176,6 +177,59 @@ export default function AuthScreen({ navigation, mode }) {
       notify(isLogin ? 'Login gagal' : 'Daftar gagal', friendlyError(e.message, isLogin));
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleGoogleLogin = async () => {
+    if (loading) return;
+    setLoading(true);
+    try {
+      const redirectTo = Platform.OS === 'web'
+        ? window.location.origin
+        : makeRedirectUri();
+
+      // Di Web, biarkan Supabase menangani redirect browser secara langsung
+      if (Platform.OS === 'web') {
+        const { error } = await supabase.auth.signInWithOAuth({
+          provider: 'google',
+          options: {
+            redirectTo,
+          },
+        });
+        if (error) throw error;
+        return;
+      }
+
+      // Di Android / iOS, buka AuthSession in-app browser
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo,
+          skipBrowserRedirect: true,
+        },
+      });
+      if (error) throw error;
+
+      const res = await WebBrowser.openAuthSessionAsync(data?.url, redirectTo);
+      if (res.type === 'success' && res.url) {
+        const fragment = res.url.split('#')[1] || res.url.split('?')[1] || '';
+        const params = new URLSearchParams(fragment);
+        const access_token = params.get('access_token');
+        const refresh_token = params.get('refresh_token');
+
+        if (access_token && refresh_token) {
+          const { error: sessionError } = await supabase.auth.setSession({
+            access_token,
+            refresh_token,
+          });
+          if (sessionError) throw sessionError;
+          goHome();
+        }
+      }
+    } catch (e) {
+      notify('Login Google gagal', e?.message || 'Terjadi kesalahan saat masuk dengan Google.');
+    } finally {
+      if (Platform.OS !== 'web') setLoading(false);
     }
   };
 
@@ -342,6 +396,24 @@ export default function AuthScreen({ navigation, mode }) {
                   </Text>
                 )}
               </TouchableOpacity>
+
+              <View style={styles.dividerRow}>
+                <View style={styles.dividerLine} />
+                <Text style={styles.dividerText}>atau</Text>
+                <View style={styles.dividerLine} />
+              </View>
+
+              <TouchableOpacity
+                style={[styles.googleButton, loading && styles.submitButtonDisabled]}
+                onPress={handleGoogleLogin}
+                disabled={loading}
+                activeOpacity={0.85}
+                accessibilityRole="button"
+                accessibilityLabel="Lanjutkan dengan Google"
+              >
+                <MaterialCommunityIcons name="google" size={18} color={colors.ink} />
+                <Text style={styles.googleButtonText}>Lanjutkan dengan Google</Text>
+              </TouchableOpacity>
             </View>
 
             <Text style={styles.footer}>A warm welcome. A fresh start.</Text>
@@ -352,7 +424,6 @@ export default function AuthScreen({ navigation, mode }) {
   );
 }
 
-// Pemetaan nama warna lokal screen ini ke token theme global
 const makeColors = (t) => ({
   background: t.background,
   ink: t.text,
@@ -541,6 +612,37 @@ const createStyles = (colors) => StyleSheet.create({
     color: colors.onPrimary,
     fontSize: 13,
     fontWeight: '700',
+  },
+  dividerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 14,
+    gap: 10,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: colors.border,
+  },
+  dividerText: {
+    color: colors.muted,
+    fontSize: 11,
+  },
+  googleButton: {
+    height: 46,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.white,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  googleButtonText: {
+    color: colors.ink,
+    fontSize: 13,
+    fontWeight: '600',
   },
   footer: {
     marginTop: 14,
