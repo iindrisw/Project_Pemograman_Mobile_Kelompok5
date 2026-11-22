@@ -45,13 +45,15 @@ export default function ProfileScreen({ navigation }) {
   const [avatarLoading, setAvatarLoading] = useState(false);
   const { isAdmin, profil } = useProfil();
 
-  // Ambil username dari akun Supabase yang sedang login
+  // Ambil nama & foto dari akun Supabase (mendukung login username maupun Google OAuth)
   useEffect(() => {
     let aktif = true;
     supabase.auth.getUser().then(({ data }) => {
-      if (aktif) {
-        setUsername(data?.user?.user_metadata?.username || '');
-        setAvatarUri(data?.user?.user_metadata?.avatar_url || null);
+      if (aktif && data?.user) {
+        const meta = data.user.user_metadata || {};
+        const emailPrefix = data.user.email ? data.user.email.split('@')[0] : '';
+        setUsername(meta.username || meta.full_name || meta.name || emailPrefix || '');
+        setAvatarUri(meta.avatar_url || meta.picture || null);
       }
     });
     return () => { aktif = false; };

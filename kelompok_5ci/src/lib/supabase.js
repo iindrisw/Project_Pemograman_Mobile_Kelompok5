@@ -1,3 +1,4 @@
+import { Platform } from 'react-native';
 import { createClient } from '@supabase/supabase-js';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -14,9 +15,9 @@ if (!supabaseUrl || !supabaseKey) {
 
 export const supabase = createClient(supabaseUrl, supabaseKey, {
   auth: {
-    storage: AsyncStorage,      // session disimpan, jadi tidak logout saat aplikasi ditutup
+    storage: AsyncStorage,              // session disimpan, jadi tidak logout saat aplikasi ditutup
     autoRefreshToken: true,
     persistSession: true,
-    detectSessionInUrl: false,  // tidak dipakai di React Native / tanpa login OAuth
+    detectSessionInUrl: Platform.OS === 'web', // aktif di Web agar token OAuth Google di URL terbaca
   },
 });
