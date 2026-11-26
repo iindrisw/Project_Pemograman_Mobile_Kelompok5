@@ -25,7 +25,6 @@ const categories = [
   { id: '3', name: 'Cakes', icon: 'cake-variant' },
 ];
 
-const IMG_SOURDOUGH = 'https://images.unsplash.com/photo-1589367920969-ab8e050bbb04?w=500';
 const IMG_CROISSANT = 'https://images.unsplash.com/photo-1555507036-ab1f4038808a?w=500';
 const IMG_BREAD = 'https://images.unsplash.com/photo-1509440159596-0249088772ff?w=500';
 const IMG_TART = 'https://images.unsplash.com/photo-1519915028121-7d3463d20b13?w=500';
@@ -73,8 +72,6 @@ function ProductCard({ image, name, price, style, onAddToCart }) {
 }
 
 /* ------------------------------- Hero carousel ------------------------------- */
-// State "slide aktif" disimpan di dalam komponen ini supaya HomeScreen
-// tidak ikut re-render setiap kali user menggeser slide.
 function HeroCarousel({ width }) {
   const { theme } = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
@@ -141,11 +138,9 @@ export default function HomeScreen({ navigation }) {
   const { width } = useWindowDimensions();
   const insets = useSafeAreaInsets();
 
-  // Keranjang global (CartContext)
   const { addToCart, cartItems } = useCart();
   const cartCount = cartItems.reduce((sum, i) => sum + i.quantity, 0);
 
-  // Toast kecil sebagai konfirmasi "ditambahkan ke keranjang"
   const [toast, setToast] = useState(null);
   useEffect(() => {
     if (!toast) return undefined;
@@ -153,11 +148,10 @@ export default function HomeScreen({ navigation }) {
     return () => clearTimeout(timer);
   }, [toast]);
 
-  // New Arrivals = produk terbaru dari Supabase (urut created_at desc).
   const [produkBaru, setProdukBaru] = useState([]);
   const [memuat, setMemuat] = useState(true);
-  const [idTerlaris, setIdTerlaris] = useState([]); // id produk, urut dari paling laris
-  const [idRekomendasi, setIdRekomendasi] = useState([]); // rekomendasi personal (hybrid)
+  const [idTerlaris, setIdTerlaris] = useState([]);
+  const [idRekomendasi, setIdRekomendasi] = useState([]);
 
   useFocusEffect(
     useCallback(() => {
@@ -166,8 +160,8 @@ export default function HomeScreen({ navigation }) {
         try {
           const [data, idLaris, idRek] = await Promise.all([
             ambilSemuaProduk(),
-            ambilIdTerlaris(6).catch(() => []), // gagal menghitung terlaris: kosongkan saja
-            ambilIdRekomendasi(6).catch(() => []), // belum ada rekomendasi: bagian disembunyikan
+            ambilIdTerlaris(6).catch(() => []),
+            ambilIdRekomendasi(6).catch(() => []),
           ]);
           if (aktif) {
             setProdukBaru(data);
@@ -184,7 +178,6 @@ export default function HomeScreen({ navigation }) {
     }, []),
   );
 
-  // Best Sellers = produk asli, urut dari yang paling banyak dibeli SEMUA akun.
   const bestSellers = useMemo(
     () => idTerlaris
       .map((id) => produkBaru.find((p) => String(p.id) === id))
@@ -192,7 +185,6 @@ export default function HomeScreen({ navigation }) {
     [idTerlaris, produkBaru],
   );
 
-  // Rekomendasi personal: dari riwayat keranjang + pesanan akun ini (hybrid filtering).
   const rekomendasi = useMemo(
     () => idRekomendasi
       .map((id) => produkBaru.find((p) => String(p.id) === id))
@@ -206,11 +198,8 @@ export default function HomeScreen({ navigation }) {
   };
 
   const H_PADDING = 20;
-  const GAP = 14;
-  const gridCardWidth = (width - H_PADDING * 2 - GAP) / 2;
+  const newArrivalsData = useMemo(() => produkBaru.slice(0, 6), [produkBaru]);
 
-  // Everything above "New Arrivals" items lives in the list header,
-  // so the whole page scrolls as ONE FlatList (no nested vertical lists).
   const renderHeader = () => (
     <View>
       {/* 1. Header */}
@@ -243,7 +232,7 @@ export default function HomeScreen({ navigation }) {
         </View>
       </View>
 
-      {/* 2. Hero carousel (3 slide informasi) */}
+      {/* 2. Hero carousel */}
       <HeroCarousel width={width - H_PADDING * 2} />
 
       {/* 3. Categories */}
@@ -265,7 +254,7 @@ export default function HomeScreen({ navigation }) {
         ))}
       </View>
 
-      {/* 3b. Recommended for You (personal, hanya tampil kalau ada) */}
+      {/* 3b. Recommended for You */}
       {rekomendasi.length > 0 && (
         <>
           <Text style={[styles.sectionTitle, styles.sectionSpacing]}>Recommended for You</Text>
@@ -297,7 +286,7 @@ export default function HomeScreen({ navigation }) {
         </>
       )}
 
-      {/* 4. Best Sellers (horizontal FlatList) */}
+      {/* 4. Best Sellers */}
       <Text style={[styles.sectionTitle, styles.sectionSpacing]}>Best Sellers</Text>
       {bestSellers.length > 0 ? (
         <FlatList
@@ -331,7 +320,7 @@ export default function HomeScreen({ navigation }) {
         </Text>
       )}
 
-      {/* 5. New Arrivals title */}
+      {/* 5. New Arrivals */}
       <View style={[styles.sectionHeader, styles.sectionSpacing]}>
         <Text style={styles.sectionTitle}>New Arrivals</Text>
         <TouchableOpacity
@@ -342,42 +331,50 @@ export default function HomeScreen({ navigation }) {
           <Ionicons name="arrow-forward" size={14} color={theme.primary} />
         </TouchableOpacity>
       </View>
+
+      {newArrivalsData.length > 0 ? (
+        <FlatList
+          data={newArrivalsData}
+          keyExtractor={(item) => item.id}
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.horizontalList}
+          ItemSeparatorComponent={() => <View style={{ width: 14 }} />}
+          renderItem={({ item }) => (
+            <TouchableOpacity
+              activeOpacity={0.9}
+              style={{ width: 180 }}
+              onPress={() => navigation.navigate('ProductDetail', { item })}
+              accessibilityRole="button"
+              accessibilityLabel={`${item.name}, ${item.price}. Produk baru. Lihat detail`}
+            >
+              <ProductCard
+                image={item.image}
+                name={item.name}
+                price={item.price}
+                onAddToCart={() => handleAdd(item)}
+                style={{ width: '100%' }}
+              />
+            </TouchableOpacity>
+          )}
+        />
+      ) : memuat ? (
+        <ActivityIndicator size="small" color={theme.primary} style={{ marginVertical: 16 }} />
+      ) : (
+        <Text style={styles.emptyText}>Belum ada produk baru.</Text>
+      )}
     </View>
   );
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
-      {/* New Arrivals: 2-column vertical FlatList that also acts as the page scroller */}
       <FlatList
-        data={produkBaru.slice(0, 4)}
-        keyExtractor={(item) => item.id}
-        numColumns={2}
+        data={[]}
+        keyExtractor={(_, idx) => String(idx)}
+        renderItem={null}
         ListHeaderComponent={renderHeader}
-        ListEmptyComponent={
-          memuat ? (
-            <ActivityIndicator size="large" color={theme.primary} style={{ marginVertical: 16 }} />
-          ) : (
-            <Text style={styles.emptyText}>Belum ada produk baru.</Text>
-          )
-        }
         showsVerticalScrollIndicator={false}
-        columnWrapperStyle={{ paddingHorizontal: H_PADDING, marginBottom: GAP, justifyContent: 'space-between' }}
         contentContainerStyle={styles.scrollContent}
-        renderItem={({ item }) => (
-          <TouchableOpacity
-            activeOpacity={0.9}
-            style={{ width: gridCardWidth }}
-            onPress={() => navigation.navigate('ProductDetail', { item })}
-          >
-            <ProductCard
-              image={item.image}
-              name={item.name}
-              price={item.price}
-              onAddToCart={() => handleAdd(item)}
-              style={{ width: '100%' }}
-            />
-          </TouchableOpacity>
-        )}
       />
 
       {toast && (
@@ -387,7 +384,6 @@ export default function HomeScreen({ navigation }) {
         </View>
       )}
 
-      {/* Fixed bottom navigation (outside the scroller) */}
       <View style={[styles.bottomNav, { height: 70 + insets.bottom, paddingBottom: insets.bottom + 8 }]}>
         <TouchableOpacity
           style={styles.navItem}
@@ -411,7 +407,6 @@ export default function HomeScreen({ navigation }) {
 }
 
 /* ----------------------------------- Styles ----------------------------------- */
-// Style dibuat dari fungsi supaya ikut berubah saat theme berganti.
 const createStyles = (t) =>
   StyleSheet.create({
     safeArea: { flex: 1, backgroundColor: t.background },
@@ -551,7 +546,7 @@ const createStyles = (t) =>
       shadowOpacity: 0.12,
       shadowRadius: 6,
     },
-    productImage: { width: '100%', height: 110, borderRadius: 40, marginBottom: 10 },
+    productImage: { width: '100%', height: 110, borderRadius: 12, marginBottom: 10 },
     productName: { fontSize: 15, fontWeight: 'bold', color: t.text, minHeight: 40 },
     productPrice: { fontSize: 14, color: t.textMuted, marginBottom: 10 },
     addToCartBtn: { backgroundColor: t.primary, paddingVertical: 9, borderRadius: 10, alignItems: 'center' },
