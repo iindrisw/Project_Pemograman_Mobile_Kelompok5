@@ -30,16 +30,15 @@ const fallbackItems = [
 function GridCard({ item, width, onAdd }) {
   const { theme } = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
+
   return (
     <View style={[styles.card, { width }]}>
       <Image source={{ uri: item.image }} style={styles.cardImage} resizeMode="cover" />
       <Text style={styles.cardName} numberOfLines={2}>{item.name}</Text>
-      <View style={styles.cardBottom}>
-        <Text style={styles.cardPrice}>{item.price}</Text>
-        <TouchableOpacity style={styles.addBtn} onPress={() => onAdd(item)} activeOpacity={0.85}>
-          <Ionicons name="add" size={22} color={theme.onPrimary} />
-        </TouchableOpacity>
-      </View>
+      <Text style={styles.cardPrice}>{item.price}</Text>
+      <TouchableOpacity style={styles.addBtn} onPress={() => onAdd(item)} activeOpacity={0.85}>
+        <Text style={styles.addBtnText}>Add to Cart</Text>
+      </TouchableOpacity>
     </View>
   );
 }
@@ -48,6 +47,7 @@ function GridCard({ item, width, onAdd }) {
 function NavItem({ icon, label, active, onPress }) {
   const { theme } = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
+
   return (
     <TouchableOpacity style={styles.navItem} onPress={onPress} activeOpacity={0.8}>
       <View style={[styles.navIconWrap, active && styles.navIconWrapActive]}>
@@ -78,7 +78,8 @@ export default function NewArrivalsScreen({ navigation, route }) {
 
   const H_PADDING = 24;
   const GAP = 12;
-  const cardWidth = (width - H_PADDING * 2 - GAP) / 2;
+  const numColumns = width >= 900 ? 4 : 2;
+  const cardWidth = (width - H_PADDING * 2 - GAP * (numColumns - 1)) / numColumns;
 
   const handleAdd = (item) => {
     // TODO: sambungkan ke cart
@@ -113,9 +114,10 @@ export default function NewArrivalsScreen({ navigation, route }) {
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
       <FlatList
+        key={`grid-${numColumns}`}
         data={filteredProducts}
         keyExtractor={(item) => item.id}
-        numColumns={2}
+        numColumns={numColumns}
         ListHeaderComponent={renderHeader()}
         ListEmptyComponent={
           <Text style={styles.emptyText}>
@@ -126,7 +128,8 @@ export default function NewArrivalsScreen({ navigation, route }) {
         columnWrapperStyle={{
           paddingHorizontal: H_PADDING,
           marginBottom: GAP,
-          justifyContent: 'space-between',
+          gap: GAP,
+          justifyContent: 'flex-start',
         }}
         contentContainerStyle={{ paddingBottom: 24 }}
         renderItem={({ item }) => <GridCard item={item} width={cardWidth} onAdd={handleAdd} />}
@@ -173,37 +176,46 @@ const createStyles = (t) => StyleSheet.create({
   count: { fontSize: 14, color: t.textMuted },
 
   card: {
-    backgroundColor: t.surface,
-    borderRadius: 22,
+    backgroundColor: t.card || t.surface,
+    borderRadius: 16,
     padding: 12,
+    elevation: 2,
+    shadowColor: t.shadow || '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 5,
   },
   cardImage: {
     width: '100%',
-    height: 126,
-    borderRadius: 60,
-    marginBottom: 12,
+    aspectRatio: 1.15,
+    borderRadius: 12,
+    marginBottom: 10,
   },
   cardName: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: 'bold',
     color: t.text,
-    lineHeight: 20,
-    minHeight: 40, // ruang 2 baris supaya semua kartu sama tinggi
+    lineHeight: 19,
+    minHeight: 38,
   },
-  cardBottom: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: 14,
+  cardPrice: {
+    fontSize: 13,
+    color: t.textMuted,
+    marginTop: 4,
+    marginBottom: 12,
   },
-  cardPrice: { fontSize: 15, color: t.textMuted },
   addBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 12,
+    width: '100%',
+    paddingVertical: 9,
+    borderRadius: 10,
     backgroundColor: t.primary,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  addBtnText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: t.onPrimary,
   },
 
   bottomNav: {

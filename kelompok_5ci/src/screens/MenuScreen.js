@@ -29,6 +29,7 @@ const norm = (s) => String(s || '').toLowerCase().trim().replace(/ies$/, 'y').re
 function GridCard({ item, width, onAdd, onPress }) {
   const { theme } = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
+
   return (
     <TouchableOpacity
       style={[styles.card, { width }]}
@@ -39,17 +40,15 @@ function GridCard({ item, width, onAdd, onPress }) {
     >
       <Image source={{ uri: item.image }} style={styles.cardImage} resizeMode="cover" />
       <Text style={styles.cardName} numberOfLines={2}>{item.name}</Text>
-      <View style={styles.cardBottom}>
-        <Text style={styles.cardPrice}>{item.price}</Text>
-        <TouchableOpacity
-          style={styles.addBtn}
-          onPress={() => onAdd(item)}
-          activeOpacity={0.85}
-          accessibilityLabel={`Add ${item.name} to cart`}
-        >
-          <Ionicons name="add" size={22} color={theme.onPrimary} />
-        </TouchableOpacity>
-      </View>
+      <Text style={styles.cardPrice}>{item.price}</Text>
+      <TouchableOpacity
+        style={styles.addBtn}
+        onPress={() => onAdd(item)}
+        activeOpacity={0.85}
+        accessibilityLabel={`Add ${item.name} to cart`}
+      >
+        <Text style={styles.addBtnText}>Add to Cart</Text>
+      </TouchableOpacity>
     </TouchableOpacity>
   );
 }
@@ -60,7 +59,7 @@ export default function MenuScreen({ navigation, route }) {
   const styles = useMemo(() => createStyles(theme), [theme]);
   const { width } = useWindowDimensions();
   const insets = useSafeAreaInsets();
-  const { isAdmin } = useProfil(); // tombol tambah produk hanya untuk admin
+  const { isAdmin } = useProfil();
 
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -82,9 +81,7 @@ export default function MenuScreen({ navigation, route }) {
     setCriteria((current) => ({ ...current, category: cocok || 'All' }));
   }, [route?.params?.kategori, route?.params?.nonce, setCriteria]);
 
-  // Data produk dari Supabase (tabel products), diurutkan dari yang terbaru.
-  // useFocusEffect (bukan useEffect): muat ulang SETIAP kali Menu kembali fokus,
-  // jadi produk yang baru ditambah/diubah/dihapus langsung terlihat.
+  // Muat ulang produk setiap kali layar Menu kembali fokus.
   useFocusEffect(
     useCallback(() => {
       let aktif = true;
@@ -101,13 +98,14 @@ export default function MenuScreen({ navigation, route }) {
       return () => { aktif = false; };
     }, []),
   );
-  
+
   // Logika Cart global
   const { addToCart } = useCart();
 
   const H_PADDING = 24;
   const GAP = 12;
-  const cardWidth = (width - H_PADDING * 2 - GAP) / 2;
+  const numColumns = width >= 900 ? 4 : 2;
+  const cardWidth = (width - H_PADDING * 2 - GAP * (numColumns - 1)) / numColumns;
 
   const handleAdd = (item) => {
     addToCart(item);
@@ -133,8 +131,8 @@ export default function MenuScreen({ navigation, route }) {
               <Ionicons name="add" size={26} color={theme.primary} />
             </TouchableOpacity>
           )}
-          <TouchableOpacity 
-            style={styles.actionBtn} 
+          <TouchableOpacity
+            style={styles.actionBtn}
             activeOpacity={0.7}
             onPress={() => navigation.navigate('Cart')}
           >
@@ -160,14 +158,14 @@ export default function MenuScreen({ navigation, route }) {
             key={index}
             style={[
               styles.categoryButton,
-              criteria.category === cat && styles.categoryButtonActive
+              criteria.category === cat && styles.categoryButtonActive,
             ]}
             onPress={() => setCriteria((current) => ({ ...current, category: cat }))}
             activeOpacity={0.8}
           >
             <Text style={[
               styles.categoryText,
-              criteria.category === cat && styles.categoryTextActive
+              criteria.category === cat && styles.categoryTextActive,
             ]}>
               {cat}
             </Text>
@@ -185,9 +183,10 @@ export default function MenuScreen({ navigation, route }) {
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
       <FlatList
+        key={`menu-grid-${numColumns}`}
         data={filteredProducts}
         keyExtractor={(item) => item.id}
-        numColumns={2}
+        numColumns={numColumns}
         ListHeaderComponent={renderHeader()}
         ListEmptyComponent={
           loading ? (
@@ -204,7 +203,8 @@ export default function MenuScreen({ navigation, route }) {
         columnWrapperStyle={{
           paddingHorizontal: H_PADDING,
           marginBottom: GAP,
-          justifyContent: 'space-between',
+          gap: GAP,
+          justifyContent: 'flex-start',
         }}
         contentContainerStyle={styles.scrollContent}
         renderItem={({ item }) => (
@@ -212,7 +212,7 @@ export default function MenuScreen({ navigation, route }) {
         )}
       />
 
-      {/* Bottom nav: sama seperti ProfileScreen (Menu | Home | Profile), item aktif = lingkaran oranye */}
+      {/* Bottom nav: Menu | Home | Profile */}
       <View style={[styles.bottomNav, { height: 70 + insets.bottom, paddingBottom: insets.bottom + 8 }]}>
         <View
           style={styles.navItem}
@@ -320,40 +320,45 @@ const createStyles = (t) => StyleSheet.create({
 
   card: {
     backgroundColor: t.card || t.surface,
-    borderRadius: 20,
+    borderRadius: 16,
     padding: 12,
-    elevation: 3,
-    shadowColor: t.shadow,
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.12,
-    shadowRadius: 6,
+    elevation: 2,
+    shadowColor: t.shadow || '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 5,
   },
   cardImage: {
     width: '100%',
-    height: 110,
-    borderRadius: 40,
+    aspectRatio: 1.15,
+    borderRadius: 12,
     marginBottom: 10,
   },
   cardName: {
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: 'bold',
     color: t.text,
-    minHeight: 40,
+    lineHeight: 19,
+    minHeight: 38,
   },
-  cardBottom: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: 10,
+  cardPrice: {
+    fontSize: 13,
+    color: t.textMuted,
+    marginTop: 4,
+    marginBottom: 12,
   },
-  cardPrice: { fontSize: 14, color: t.textMuted, fontWeight: 'bold' },
   addBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 12,
+    width: '100%',
+    paddingVertical: 9,
+    borderRadius: 10,
     backgroundColor: t.primary,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  addBtnText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: t.onPrimary,
   },
 
   bottomNav: {
